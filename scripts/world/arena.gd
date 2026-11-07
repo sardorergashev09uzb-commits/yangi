@@ -1,14 +1,21 @@
 extends Node3D
 ## Test poligoni, Surxayil Boss arenasi va Boysun Dashti (Boychibor bilan).
 
-var _boss: BossSurxayil
+const HorseScript = preload("res://scripts/world/horse.gd")
+const SteppeGiantScript = preload("res://scripts/enemies/steppe_giant.gd")
+const BossSurxayilScript = preload("res://scripts/enemies/boss_surxayil.gd")
+const EnemyScript = preload("res://scripts/enemies/enemy.gd")
+const DummyScript = preload("res://scripts/world/dummy.gd")
+const TrapScript = preload("res://scripts/world/trap.gd")
+
+var _boss: CharacterBody3D
 var _arena_gate: StaticBody3D
 var _fight_started := false
 var _boss_spawn := Vector3(0, 0, -90)
 var _enemy_spawns: Array[Dictionary] = []
 
-var _horse: Horse
-var _giant: SteppeGiant
+var _horse: CharacterBody3D
+var _giant: CharacterBody3D
 var _giant_spawn := Vector3(38, 0, 48)
 
 
@@ -25,23 +32,23 @@ func _ready() -> void:
 	ramp.rotation_degrees.x = 15
 
 	# Mashg'ulot yog'ochi
-	var dummy := Dummy.new()
+	var dummy = DummyScript.new()
 	dummy.position = Vector3(8, 0, -2)
 	add_child(dummy)
 
 	# Qalmoq soqchilari (yo'l bo'yida)
-	_spawn_enemy(Enemy.Kind.SWORD, Vector3(-4, 0, -22))
-	_spawn_enemy(Enemy.Kind.SWORD, Vector3(4, 0, -24))
-	_spawn_enemy(Enemy.Kind.SPEAR, Vector3(-3, 0, -32))
-	_spawn_enemy(Enemy.Kind.ARCHER, Vector3(5, 0, -38))
+	_spawn_enemy(EnemyScript.Kind.SWORD, Vector3(-4, 0, -22))
+	_spawn_enemy(EnemyScript.Kind.SWORD, Vector3(4, 0, -24))
+	_spawn_enemy(EnemyScript.Kind.SPEAR, Vector3(-3, 0, -32))
+	_spawn_enemy(EnemyScript.Kind.ARCHER, Vector3(5, 0, -38))
 
 	# Sinov tuzog'i
-	var trap := Trap.new()
+	var trap = TrapScript.new()
 	trap.position = Vector3(5, 0.15, 8)
 	add_child(trap)
 
 	# Boychibor tulpori (o'yinchi yonida o'tlab turadi)
-	_horse = Horse.new()
+	_horse = HorseScript.new()
 	_horse.position = Vector3(4.5, 0.1, 3.5)
 	add_child(_horse)
 
@@ -70,7 +77,7 @@ func _build_steppe() -> void:
 		_balbal(bp)
 
 	# Dasht Devi (Qoyali Dev)
-	_giant = SteppeGiant.new()
+	_giant = SteppeGiantScript.new()
 	_giant.position = _giant_spawn
 	add_child(_giant)
 
@@ -107,9 +114,9 @@ func _balbal(pos: Vector3) -> void:
 
 
 func _connect_player_respawn() -> void:
-	var player := get_tree().get_first_node_in_group("player") as Player
-	if player:
-		player.respawned.connect(_on_player_respawned)
+	var player := get_tree().get_first_node_in_group("player")
+	if player and player.has_signal("respawned"):
+		player.connect("respawned", _on_player_respawned)
 
 
 func _on_player_respawned() -> void:
@@ -121,15 +128,15 @@ func _on_player_respawned() -> void:
 		t.tween_property(_arena_gate, "position:y", -6.0, 0.5)
 
 	# Boss tirik bo'lsa, asl joyiga qaytarilib, uxlash holatiga o'tkaziladi
-	if _boss and is_instance_valid(_boss):
+	if _boss and is_instance_valid(_boss) and _boss.has_method("reset_boss"):
 		_boss.reset_boss(_boss_spawn)
 
 	# Dasht devi tirik bo'lsa, joyiga qaytadi
-	if _giant and is_instance_valid(_giant):
+	if _giant and is_instance_valid(_giant) and _giant.has_method("reset_to_spawn"):
 		_giant.reset_to_spawn(_giant_spawn)
 
 	# Boychibor otdan tushgan bo'lsa, o'yinchi yoniga qaytadi
-	if _horse and is_instance_valid(_horse) and not _horse.is_mounted:
+	if _horse and is_instance_valid(_horse) and not _horse.get("is_mounted"):
 		_horse.global_position = Vector3(4.5, 0.1, 3.5)
 		_horse.velocity = Vector3.ZERO
 
@@ -137,8 +144,8 @@ func _on_player_respawned() -> void:
 	for item in _enemy_spawns:
 		var raw_node: Variant = item.get("node")
 		if is_instance_valid(raw_node):
-			var e := raw_node as Enemy
-			if e != null and not e.is_queued_for_deletion():
+			var e: Variant = raw_node
+			if e != null and not e.is_queued_for_deletion() and e.has_method("reset_to_spawn"):
 				e.reset_to_spawn(item.pos)
 
 	# Maydondagi eski to'lqin yoki otilgan o'qlarni tozalash
@@ -146,13 +153,13 @@ func _on_player_respawned() -> void:
 		if is_instance_valid(s):
 			s.queue_free()
 	for child in get_children():
-		if is_instance_valid(child) and child is Shockwave:
+		if is_instance_valid(child) and child.is_in_group("shockwaves"):
 			child.queue_free()
 
 
-func _spawn_enemy(kind: Enemy.Kind, pos: Vector3) -> void:
-	var e := Enemy.new()
-	e.kind = kind
+func _spawn_enemy(kind_val: int, pos: Vector3) -> void:
+	var e = EnemyScript.new()
+	e.kind = kind_val
 	e.position = pos
 	add_child(e)
 	var dict := {"node": e, "pos": pos}
@@ -184,10 +191,11 @@ func _build_boss_arena() -> void:
 
 	# Surxayil Alp bossi
 	_boss_spawn = arena_center + Vector3(0, 0, -8)
-	_boss = BossSurxayil.new()
+	_boss = BossSurxayilScript.new()
 	_boss.position = _boss_spawn
 	add_child(_boss)
-	_boss.boss_defeated.connect(_on_boss_defeated)
+	if _boss.has_signal("boss_defeated"):
+		_boss.connect("boss_defeated", _on_boss_defeated)
 
 	# Kirish triggeri
 	var trigger := Area3D.new()
@@ -204,10 +212,11 @@ func _build_boss_arena() -> void:
 
 
 func _on_player_entered_arena(body: Node3D) -> void:
-	if _fight_started or not body is Player or (_boss and _boss.state == BossSurxayil.State.DEAD):
+	if _fight_started or not body.is_in_group("player") or (_boss and _boss.get("state") == 6): # State.DEAD = 6
 		return
 	_fight_started = true
-	_boss.activate()
+	if _boss and _boss.has_method("activate"):
+		_boss.activate()
 
 	var t := create_tween()
 	t.tween_property(_arena_gate, "position:y", 3.0, 0.8).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)

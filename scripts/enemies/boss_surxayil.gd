@@ -28,7 +28,7 @@ var health := 280.0
 var phase := 1
 var state := State.DORMANT
 
-var _player: Player
+var _player: CharacterBody3D
 var _timer := 0.0
 var _sub_timer := 0.0
 var _cooldown := 1.0
@@ -112,11 +112,12 @@ func activate() -> void:
 
 func _physics_process(delta: float) -> void:
 	if _player == null or not is_instance_valid(_player):
-		_player = get_tree().get_first_node_in_group("player") as Player
+		_player = get_tree().get_first_node_in_group("player") as CharacterBody3D
 
 	_cooldown -= delta
 
-	if state == State.DEAD or state == State.DORMANT or _player == null or _player.state == Player.State.DEAD:
+	var player_dead: bool = _player == null or _player.get("state") == 4 # State.DEAD
+	if state == State.DEAD or state == State.DORMANT or player_dead:
 		velocity.x = move_toward(velocity.x, 0.0, 20.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 20.0 * delta)
 		velocity.y -= gravity * delta

@@ -443,17 +443,15 @@ func _regen(delta: float) -> void:
 
 func _try_mount_horse() -> void:
 	for h in get_tree().get_nodes_in_group("horses"):
-		var horse := h as Horse
-		if horse != null and not horse.is_mounted and global_position.distance_to(horse.global_position) < 3.2:
-			horse.mount(self)
+		if h != null and h.has_method("mount") and not h.get("is_mounted") and global_position.distance_to(h.global_position) < 3.2:
+			h.mount(self)
 			return
 
 
 func _whistle_horse() -> void:
 	FX.popup(global_position + Vector3.UP * 2.2, 0.0, Color(0.4, 0.8, 1.0))
 	for h in get_tree().get_nodes_in_group("horses"):
-		var horse := h as Horse
-		if horse != null and not horse.is_mounted:
-			horse.call_horse(self)
+		if h != null and h.has_method("call_horse") and not h.get("is_mounted"):
+			h.call_horse(self)
 			return
 

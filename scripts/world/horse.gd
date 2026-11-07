@@ -15,7 +15,7 @@ signal mounted_state_changed(is_mounted: bool)
 @export var gravity := 20.0
 
 var is_mounted := false
-var rider: Player = null
+var rider: CharacterBody3D = null
 var is_called := false
 
 var _follow_target: Node3D = null
@@ -163,7 +163,11 @@ func _process_mounted(delta: float) -> void:
 
 	# Harakat yo'nalishi (kamera burchagiga mos)
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var cam_yaw := rider.rig.yaw
+	var cam_yaw: float = 0.0
+	if rider != null:
+		var rig_node: Variant = rider.get("rig")
+		if rig_node != null and "yaw" in rig_node:
+			cam_yaw = float(rig_node.yaw)
 	var move_dir := Vector3(input.x, 0, input.y).rotated(Vector3.UP, cam_yaw)
 	var moving := move_dir.length() > 0.1
 
@@ -236,7 +240,7 @@ func _animate_legs(delta: float) -> void:
 func _update_prompt() -> void:
 	if is_mounted:
 		return
-	var p := get_tree().get_first_node_in_group("player") as Player
+	var p := get_tree().get_first_node_in_group("player") as CharacterBody3D
 	if p == null:
 		_prompt_label.visible = false
 		return
@@ -244,11 +248,11 @@ func _update_prompt() -> void:
 	_prompt_label.visible = dist < 3.2
 
 
-func mount(p: Player) -> void:
+func mount(p: CharacterBody3D) -> void:
 	is_mounted = true
 	rider = p
-	rider.is_mounted = true
-	rider.mounted_horse = self
+	rider.set("is_mounted", true)
+	rider.set("mounted_horse", self)
 	is_called = false
 	_prompt_label.visible = false
 	mounted_state_changed.emit(true)
@@ -259,8 +263,8 @@ func dismount() -> void:
 		return
 	var drop_pos := global_position + global_basis.x * 1.6
 	rider.global_position = drop_pos
-	rider.is_mounted = false
-	rider.mounted_horse = null
+	rider.set("is_mounted", false)
+	rider.set("mounted_horse", null)
 	is_mounted = false
 	rider = null
 	mounted_state_changed.emit(false)

@@ -16,7 +16,7 @@ enum State { IDLE, CHASE, THROW, STOMP, STAGGER, DEAD }
 var state := State.IDLE
 var health := 180.0
 
-var _player: Player
+var _player: CharacterBody3D
 var _timer := 0.0
 var _cooldown := 1.5
 var _body: MeshInstance3D
@@ -81,11 +81,11 @@ func _update_label() -> void:
 
 func _physics_process(delta: float) -> void:
 	if _player == null or not is_instance_valid(_player):
-		_player = get_tree().get_first_node_in_group("player") as Player
+		_player = get_tree().get_first_node_in_group("player") as CharacterBody3D
 
 	_cooldown -= delta
 
-	var player_alive := _player != null and _player.state != Player.State.DEAD
+	var player_alive: bool = _player != null and _player.get("state") != 4 # State.DEAD
 	if state == State.DEAD or _player == null or not player_alive:
 		velocity.x = move_toward(velocity.x, 0.0, 15.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 15.0 * delta)
