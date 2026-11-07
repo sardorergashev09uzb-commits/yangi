@@ -378,7 +378,11 @@ func _die() -> void:
 	await get_tree().create_timer(1.8, true, false, true).timeout
 	global_position = _spawn
 	velocity = Vector3.ZERO
-	model.rotation.x = 0.0
+	model.rotation = Vector3.ZERO
+	if rig:
+		rig.global_position = _spawn + Vector3.UP * rig.height
+		rig.yaw = 0.0
+		rig.pitch = deg_to_rad(-15.0)
 	health = max_health
 	stamina = max_stamina
 	_hit_invuln = 1.0

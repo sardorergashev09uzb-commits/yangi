@@ -1,11 +1,10 @@
 extends CanvasLayer
-## HUD: salomatlik, kuch, kamon zaryadi, dushmanlar soni va Epik Boss salomatlik paneli.
+## HUD: salomatlik, kuch, kamon zaryadi, dushmanlar soni, Boss paneli va qayta boshlash menyusi.
 
 var _health_bar: ProgressBar
 var _stamina_bar: ProgressBar
 var _charge_bar: ProgressBar
 var _crosshair: Label
-var _death_label: Label
 var _enemy_label: Label
 var _player: Player
 
@@ -14,7 +13,10 @@ var _boss_container: VBoxContainer
 var _boss_name_label: Label
 var _boss_bar: ProgressBar
 var _boss_phase_label: Label
-var _boss_victory_label: Label
+
+# O'lim va G'alaba ekranlari
+var _death_panel: Panel
+var _victory_panel: Panel
 
 
 func _ready() -> void:
@@ -38,36 +40,124 @@ func _ready() -> void:
 	_charge_bar.position += Vector2(-60, 30)
 	_charge_bar.visible = false
 
-	_death_label = Label.new()
-	_death_label.text = "ALPAMISH YIQILDI\nQayta tiklanmoqda..."
-	_death_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_death_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_death_label.add_theme_font_size_override("font_size", 44)
-	_death_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
-	_death_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_death_label.visible = false
-	add_child(_death_label)
-
-	_boss_victory_label = Label.new()
-	_boss_victory_label.text = "SURXAYIL ALP MAG'LUB ETILDI!"
-	_boss_victory_label.add_theme_font_size_override("font_size", 42)
-	_boss_victory_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-	_boss_victory_label.set_anchors_preset(Control.PRESET_CENTER)
-	_boss_victory_label.position += Vector2(-300, -100)
-	_boss_victory_label.visible = false
-	add_child(_boss_victory_label)
-
 	_setup_boss_ui()
+	_setup_game_over_ui()
+	_setup_victory_ui()
 
 	var help := Label.new()
 	help.position = Vector2(30, 76)
-	help.text = "WASD - yurish | Sichqoncha - kamera/burilish | Shift - yugurish | Space - qochish | X - sakrash\n" \
-			+ "Chap tugma - qilich kombosi (3 zarba) | R - og'ir zarba | O'ng tugma ushlab - kamon, chap tugma - otish\n" \
+	help.text = "WASD - yurish | Sichqoncha - kamera | Shift - yugurish | Space - qochish | X - sakrash\n" \
+			+ "Chap tugma - qilich kombosi | R - og'ir zarba | O'ng tugma - kamon | T - maydonni qayta boshlash\n" \
 			+ "Shimolga (oldinga) yuring: Surxayil Arenasi kutmoqda!"
 	add_child(help)
 
 	_connect_player.call_deferred()
 	_connect_boss.call_deferred()
+
+
+func _setup_game_over_ui() -> void:
+	_death_panel = Panel.new()
+	_death_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.02, 0.02, 0.88)
+	_death_panel.add_theme_stylebox_override("panel", style)
+	_death_panel.visible = false
+	add_child(_death_panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.offset_left = -260
+	vbox.offset_right = 260
+	vbox.offset_top = -120
+	vbox.offset_bottom = 120
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	_death_panel.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "ALPAMISH YIQILDI"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 54)
+	title.add_theme_color_override("font_color", Color(0.95, 0.15, 0.15))
+	vbox.add_child(title)
+
+	var sub := Label.new()
+	sub.text = "Qayta boshlash uchun [ SPACE ] yoki [ R ] bosing"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 22)
+	sub.add_theme_color_override("font_color", Color(0.85, 0.8, 0.75))
+	vbox.add_child(sub)
+
+	var space := Control.new()
+	space.custom_minimum_size = Vector2(0, 16)
+	vbox.add_child(space)
+
+	var btn := Button.new()
+	btn.text = "Qayta boshlash (Restart)"
+	btn.custom_minimum_size = Vector2(260, 48)
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.pressed.connect(_restart_scene)
+	vbox.add_child(btn)
+
+
+func _setup_victory_ui() -> void:
+	_victory_panel = Panel.new()
+	_victory_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.02, 0.06, 0.03, 0.88)
+	_victory_panel.add_theme_stylebox_override("panel", style)
+	_victory_panel.visible = false
+	add_child(_victory_panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_CENTER)
+	vbox.offset_left = -300
+	vbox.offset_right = 300
+	vbox.offset_top = -130
+	vbox.offset_bottom = 130
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	_victory_panel.add_child(vbox)
+
+	var title := Label.new()
+	title.text = "SURXAYIL ALP MAG'LUB ETILDI!"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 48)
+	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	vbox.add_child(title)
+
+	var sub := Label.new()
+	sub.text = "Qalmoq botiri tiz cho'kdi. Qo'ng'irot sari yo'l ochildi!\n[ SPACE ] yoki [ R ] – Boss bilan qayta jang qilish"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub.add_theme_font_size_override("font_size", 20)
+	sub.add_theme_color_override("font_color", Color(0.9, 0.9, 0.85))
+	vbox.add_child(sub)
+
+	var space := Control.new()
+	space.custom_minimum_size = Vector2(0, 16)
+	vbox.add_child(space)
+
+	var btn := Button.new()
+	btn.text = "Boss bilan qayta jang qilish"
+	btn.custom_minimum_size = Vector2(280, 48)
+	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	btn.pressed.connect(_restart_scene)
+	vbox.add_child(btn)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_T:
+			_restart_scene()
+			return
+		if _death_panel.visible or _victory_panel.visible:
+			if event.keycode == KEY_SPACE or event.keycode == KEY_R or event.keycode == KEY_ENTER:
+				_restart_scene()
+
+
+func _restart_scene() -> void:
+	FX.reset()
+	Engine.time_scale = 1.0
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	get_tree().reload_current_scene()
 
 
 func _setup_boss_ui() -> void:
@@ -139,10 +229,12 @@ func _connect_player() -> void:
 		_health_bar.max_value = m
 		_health_bar.value = c)
 	_player.died.connect(func() -> void:
-		_death_label.visible = true
-		_boss_container.visible = false)
+		_death_panel.visible = true
+		_boss_container.visible = false
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE)
 	_player.respawned.connect(func() -> void:
-		_death_label.visible = false)
+		_death_panel.visible = false
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
 
 
 func _connect_boss() -> void:
@@ -180,13 +272,8 @@ func _on_boss_phase(phase: int) -> void:
 
 func _on_boss_defeated() -> void:
 	_boss_container.visible = false
-	_boss_victory_label.visible = true
-	await get_tree().create_timer(4.5).timeout
-	var t := create_tween()
-	t.tween_property(_boss_victory_label, "modulate:a", 0.0, 1.0)
-	t.tween_callback(func() -> void:
-		_boss_victory_label.visible = false
-		_boss_victory_label.modulate.a = 1.0)
+	_victory_panel.visible = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 func _process(_delta: float) -> void:
