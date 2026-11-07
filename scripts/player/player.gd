@@ -1,14 +1,28 @@
 class_name Player
 extends CharacterBody3D
-## Alpamish: harakat, qochish (i-frame bilan), kuch (stamina) va nishonga qulflash.
+## Alpamish: harakat, qochish, yaqin jang kombosi, kamon, salomatlik va kuch (stamina).
 
 signal stamina_changed(current: float, maximum: float)
+signal health_changed(current: float, maximum: float)
+signal died
+signal respawned
 
-enum State { NORMAL, DODGE }
+enum State { NORMAL, DODGE, ATTACK, HURT, DEAD }
+
+# Jang ma'lumotlari: vaqtlar soniyada. swing: 0 - chapga, 1 - o'ngga, 2 - tepadan pastga
+const LIGHT_COMBO := [
+	{"damage": 18.0, "windup": 0.10, "active": 0.14, "recover": 0.22, "lunge": 3.5, "swing": 0, "cost": 10.0},
+	{"damage": 20.0, "windup": 0.08, "active": 0.14, "recover": 0.24, "lunge": 3.5, "swing": 1, "cost": 10.0},
+	{"damage": 32.0, "windup": 0.16, "active": 0.16, "recover": 0.42, "lunge": 5.0, "swing": 2, "cost": 12.0},
+]
+const HEAVY := {"damage": 50.0, "windup": 0.38, "active": 0.16, "recover": 0.48, "lunge": 5.0, "swing": 2, "cost": 25.0}
+const BOW_DRAW_TIME := 0.8
+const BOW_COST := 8.0
 
 @export_group("Harakat")
 @export var run_speed := 5.5
 @export var sprint_speed := 8.5
+@export var aim_speed := 3.0
 @export var ground_accel := 45.0
 @export var air_accel := 12.0
 @export var jump_velocity := 6.5
@@ -21,43 +35,83 @@ enum State { NORMAL, DODGE }
 @export var dodge_iframes := 0.28
 @export var dodge_cost := 20.0
 
-@export_group("Kuch")
+@export_group("Kuch va salomatlik")
+@export var max_health := 100.0
 @export var max_stamina := 100.0
 @export var sprint_cost_per_sec := 14.0
 @export var stamina_regen := 28.0
 @export var regen_delay := 0.8
-
-@export_group("Lock-on")
-@export var lock_range := 25.0
+@export var hurt_iframes := 0.7
 
 var state := State.NORMAL
+var health := 100.0
 var stamina := 100.0
-var invulnerable := false
-var lock_target: Node3D = null
+var aiming := false
+var bow_charge := 0.0
 
+var invulnerable: bool:
+	get:
+		return _dodge_invuln or _hit_invuln > 0.0
+
+var _dodge_invuln := false
+var _hit_invuln := 0.0
 var _dodge_dir := Vector3.ZERO
 var _dodge_timer := 0.0
 var _regen_timer := 0.0
+var _hurt_timer := 0.0
+var _spawn := Vector3.ZERO
+
+var _attack: Dictionary = {}
+var _attack_heavy := false
+var _attack_time := 0.0
+var _attack_dir := Vector3.FORWARD
+var _combo_index := 0
+var _hit_list: Array[Node] = []
+var _buffer_light := 0.0
+var _buffer_heavy := 0.0
+var _drawing := false
 
 @onready var model: Node3D = $Model
 @onready var rig: CameraRig = $CameraRig
+@onready var weapon: Node3D = $Model/WeaponPivot
+@onready var hitbox: Area3D = $Model/Hitbox
 
 
 func _ready() -> void:
+	health = max_health
 	stamina = max_stamina
+	_spawn = global_position
 	collision_layer = 1 << 1
-	collision_mask = 1
+	collision_mask = 1 | (1 << 2)
+	hitbox.collision_layer = 1 << 3
+	hitbox.collision_mask = 1 << 2
 
 
 func _physics_process(delta: float) -> void:
-	_update_lock_on()
+	if _hit_invuln > 0.0:
+		_hit_invuln -= delta
+		model.visible = int(_hit_invuln * 20.0) % 2 == 0 or _hit_invuln <= 0.0
 	match state:
 		State.NORMAL:
 			_normal(delta)
 		State.DODGE:
 			_dodge(delta)
+		State.ATTACK:
+			_attack_tick(delta)
+		State.HURT:
+			_hurt(delta)
+		State.DEAD:
+			velocity.x = 0.0
+			velocity.z = 0.0
+			velocity.y -= gravity * delta
 	move_and_slide()
 	_regen(delta)
+
+
+# ---------------------------------------------------------------- Oddiy holat
+
+func _cam_forward() -> Vector3:
+	return Vector3(-sin(rig.yaw), 0.0, -cos(rig.yaw))
 
 
 func _normal(delta: float) -> void:
@@ -65,56 +119,280 @@ func _normal(delta: float) -> void:
 	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, rig.yaw)
 	var moving := dir.length() > 0.1
 
-	var sprinting := moving and Input.is_action_pressed("sprint") and stamina > 1.0 and is_on_floor()
+	aiming = Input.is_action_pressed("aim") and is_on_floor()
+	rig.aiming = aiming
+
+	var sprinting := moving and not aiming and Input.is_action_pressed("sprint") \
+			and stamina > 1.0 and is_on_floor()
 	if sprinting:
 		_use_stamina(sprint_cost_per_sec * delta)
 
-	var speed := sprint_speed if sprinting else run_speed
+	var speed := run_speed
+	if sprinting:
+		speed = sprint_speed
+	elif aiming:
+		speed = aim_speed
 	var accel := ground_accel if is_on_floor() else air_accel
 	var target_vel := dir * speed
 	velocity.x = move_toward(velocity.x, target_vel.x, accel * delta)
 	velocity.z = move_toward(velocity.z, target_vel.z, accel * delta)
 
 	if is_on_floor():
-		if Input.is_action_just_pressed("jump"):
+		if Input.is_action_just_pressed("jump") and not aiming:
 			velocity.y = jump_velocity
 	else:
 		velocity.y -= gravity * delta
 
-	# Yuzlanish: qulflanganda nishonga, aks holda harakat tomoniga
-	if lock_target != null and not sprinting:
-		var to_t := lock_target.global_position - global_position
-		_face(Vector3(to_t.x, 0.0, to_t.z), delta)
+	# Yuzlanish: nishonlashda va turganda kamera tomoniga (sichqoncha bilan buriladi),
+	# yurganda harakat tomoniga.
+	if aiming:
+		_face(_cam_forward(), delta)
 	elif moving:
 		_face(dir, delta)
+	else:
+		_face(_cam_forward(), delta)
 
 	if Input.is_action_just_pressed("dodge") and is_on_floor() and stamina >= dodge_cost:
+		_cancel_bow()
 		_start_dodge(dir if moving else -model.global_basis.z)
+		return
 
+	if aiming:
+		_bow(delta)
+	else:
+		_cancel_bow()
+		if is_on_floor():
+			if Input.is_action_just_pressed("attack_light"):
+				_start_attack(false, 0)
+			elif Input.is_action_just_pressed("attack_heavy"):
+				_start_attack(true, 0)
+
+
+# ---------------------------------------------------------------- Kamon
+
+func _bow(delta: float) -> void:
+	if not _drawing:
+		if Input.is_action_just_pressed("attack_light") and stamina >= BOW_COST:
+			_drawing = true
+			bow_charge = 0.0
+		return
+	bow_charge = minf(bow_charge + delta / BOW_DRAW_TIME, 1.0)
+	if Input.is_action_just_released("attack_light"):
+		if bow_charge > 0.15:
+			_fire_bow(bow_charge)
+		_cancel_bow()
+
+
+func _cancel_bow() -> void:
+	_drawing = false
+	bow_charge = 0.0
+
+
+func _fire_bow(charge: float) -> void:
+	_use_stamina(BOW_COST)
+	var cam := rig.camera
+	var origin := cam.global_position
+	var fwd := -cam.global_basis.z
+	var far := origin + fwd * 120.0
+	var query := PhysicsRayQueryParameters3D.create(origin, far, 1 | (1 << 2), [get_rid()])
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var target: Vector3 = far if hit.is_empty() else hit.position
+	var spawn := global_position + Vector3.UP * 1.45 + fwd * 0.6
+	var arrow := Arrow.new()
+	arrow.shooter = self
+	arrow.damage = lerpf(14.0, 40.0, charge)
+	arrow.velocity = (target - spawn).normalized() * lerpf(28.0, 55.0, charge)
+	get_tree().current_scene.add_child(arrow)
+	arrow.global_position = spawn
+	rig.shake(0.05)
+
+
+# ---------------------------------------------------------------- Yaqin jang
+
+func _start_attack(heavy: bool, index: int) -> void:
+	if stamina < 1.0:
+		return
+	_attack = HEAVY if heavy else LIGHT_COMBO[index]
+	_attack_heavy = heavy
+	_combo_index = index
+	_attack_time = 0.0
+	_hit_list.clear()
+	_buffer_light = 0.0
+	_buffer_heavy = 0.0
+	_use_stamina(_attack.cost)
+
+	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, rig.yaw)
+	_attack_dir = dir.normalized() if dir.length() > 0.1 else _cam_forward()
+	_face(_attack_dir, 1.0 / 60.0, true)
+	state = State.ATTACK
+
+
+func _attack_tick(delta: float) -> void:
+	_attack_time += delta
+	_buffer_light = maxf(_buffer_light - delta, 0.0)
+	_buffer_heavy = maxf(_buffer_heavy - delta, 0.0)
+	if Input.is_action_just_pressed("attack_light"):
+		_buffer_light = 0.4
+	if Input.is_action_just_pressed("attack_heavy"):
+		_buffer_heavy = 0.4
+
+	var windup: float = _attack.windup
+	var active: float = _attack.active
+	var recover: float = _attack.recover
+	var strike_end := windup + active
+	var total := strike_end + recover
+
+	# Qochish bilan jangni bekor qilish (zarbadan keyin)
+	if _attack_time >= windup and Input.is_action_just_pressed("dodge") \
+			and stamina >= dodge_cost and is_on_floor():
+		_end_attack()
+		_start_dodge(_attack_dir)
+		return
+
+	# Vaqt oynasiga qarab harakat: tayyorlanish (to'xtash), zarba (oldinga siljish), tiklanish
+	var lunge: float = _attack.lunge
+	if _attack_time >= windup and _attack_time < strike_end:
+		velocity.x = _attack_dir.x * lunge
+		velocity.z = _attack_dir.z * lunge
+		_check_hits()
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, 40.0 * delta)
+		velocity.z = move_toward(velocity.z, 0.0, 40.0 * delta)
+	velocity.y -= gravity * delta
+
+	_update_swing(windup, active, recover)
+
+	# Kombo yoki og'ir zarbaga o'tish (tiklanishning boshlanishidan keyin)
+	if _attack_time >= strike_end + recover * 0.3:
+		if _buffer_heavy > 0.0 and stamina >= 1.0:
+			_start_attack(true, 0)
+			return
+		if _buffer_light > 0.0 and not _attack_heavy and stamina >= 1.0 \
+				and _combo_index < LIGHT_COMBO.size() - 1:
+			_start_attack(false, _combo_index + 1)
+			return
+
+	if _attack_time >= total:
+		_end_attack()
+
+
+func _check_hits() -> void:
+	for b in hitbox.get_overlapping_bodies():
+		if b == self or b in _hit_list or not b.has_method("take_damage"):
+			continue
+		_hit_list.append(b)
+		var knock := 9.0 if _attack_heavy else 5.0
+		b.take_damage(_attack.damage, global_position, knock)
+		FX.hit_stop(0.12 if _attack_heavy else 0.07)
+		rig.shake(0.3 if _attack_heavy else 0.15)
+
+
+func _end_attack() -> void:
+	state = State.NORMAL
+	_combo_index = 0
+	weapon.rotation_degrees = Vector3.ZERO
+
+
+func _update_swing(windup: float, active: float, recover: float) -> void:
+	var poses := [
+		[Vector3(0, 80, 0), Vector3(0, -80, 0)],
+		[Vector3(0, -80, 0), Vector3(0, 80, 0)],
+		[Vector3(110, 0, 0), Vector3(-40, 0, 0)],
+	]
+	var pose: Array = poses[_attack.swing]
+	var start: Vector3 = pose[0]
+	var end: Vector3 = pose[1]
+	if _attack_time < windup:
+		weapon.rotation_degrees = Vector3.ZERO.lerp(start, _attack_time / windup)
+	elif _attack_time < windup + active:
+		weapon.rotation_degrees = start.lerp(end, (_attack_time - windup) / active)
+	else:
+		var t := clampf((_attack_time - windup - active) / recover, 0.0, 1.0)
+		weapon.rotation_degrees = end.lerp(Vector3.ZERO, t)
+
+
+# ---------------------------------------------------------------- Qochish
 
 func _start_dodge(dir: Vector3) -> void:
 	_use_stamina(dodge_cost)
 	_dodge_dir = Vector3(dir.x, 0.0, dir.z).normalized()
 	_dodge_timer = 0.0
 	state = State.DODGE
-	invulnerable = true
+	_dodge_invuln = true
 	_face(_dodge_dir, 1.0 / 60.0, true)
 
 
 func _dodge(delta: float) -> void:
 	_dodge_timer += delta
 	var t := clampf(_dodge_timer / dodge_time, 0.0, 1.0)
-	var curve := 1.0 - t * t  # tez boshlanadi, sekinlashadi
+	var curve := 1.0 - t * t
 	velocity.x = _dodge_dir.x * dodge_speed * curve
 	velocity.z = _dodge_dir.z * dodge_speed * curve
 	velocity.y -= gravity * delta
-	invulnerable = _dodge_timer < dodge_iframes
+	_dodge_invuln = _dodge_timer < dodge_iframes
 	model.scale.y = lerpf(0.65, 1.0, t)  # vaqtincha vizual signal
 	if _dodge_timer >= dodge_time:
 		state = State.NORMAL
-		invulnerable = false
+		_dodge_invuln = false
 		model.scale.y = 1.0
 
+
+# ---------------------------------------------------------------- Zarar va o'lim
+
+func take_damage(amount: float, from_pos: Vector3, knockback := 5.0) -> void:
+	if invulnerable or state == State.DEAD:
+		return
+	health = maxf(health - amount, 0.0)
+	health_changed.emit(health, max_health)
+	FX.hit_stop(0.05)
+	rig.shake(0.35)
+	_cancel_bow()
+	_end_attack()
+	model.scale.y = 1.0
+	_dodge_invuln = false
+	if health <= 0.0:
+		_die()
+		return
+	var away := global_position - from_pos
+	away.y = 0.0
+	away = away.normalized() if away.length() > 0.01 else -model.global_basis.z
+	velocity = away * knockback
+	state = State.HURT
+	_hurt_timer = 0.3
+	_hit_invuln = hurt_iframes
+
+
+func _hurt(delta: float) -> void:
+	_hurt_timer -= delta
+	velocity.x = move_toward(velocity.x, 0.0, 20.0 * delta)
+	velocity.z = move_toward(velocity.z, 0.0, 20.0 * delta)
+	velocity.y -= gravity * delta
+	if _hurt_timer <= 0.0:
+		state = State.NORMAL
+
+
+func _die() -> void:
+	state = State.DEAD
+	aiming = false
+	rig.aiming = false
+	model.visible = true
+	model.rotation.x = -PI / 2.0
+	died.emit()
+	await get_tree().create_timer(2.5).timeout
+	global_position = _spawn
+	velocity = Vector3.ZERO
+	model.rotation.x = 0.0
+	health = max_health
+	stamina = max_stamina
+	_hit_invuln = 1.0
+	state = State.NORMAL
+	health_changed.emit(health, max_health)
+	stamina_changed.emit(stamina, max_stamina)
+	respawned.emit()
+
+
+# ---------------------------------------------------------------- Yordamchi
 
 func _face(dir: Vector3, delta: float, instant := false) -> void:
 	if dir.length() < 0.01:
@@ -139,40 +417,3 @@ func _regen(delta: float) -> void:
 	if stamina < max_stamina:
 		stamina = minf(stamina + stamina_regen * delta, max_stamina)
 		stamina_changed.emit(stamina, max_stamina)
-
-
-func _update_lock_on() -> void:
-	if lock_target != null:
-		if not is_instance_valid(lock_target) \
-				or lock_target.global_position.distance_to(global_position) > lock_range * 1.3:
-			_set_lock(null)
-	if Input.is_action_just_pressed("lock_on"):
-		if lock_target != null:
-			_set_lock(null)
-		else:
-			_set_lock(_find_target())
-
-
-func _find_target() -> Node3D:
-	var best: Node3D = null
-	var best_score := INF
-	var cam_forward := -rig.camera.global_basis.z
-	for n in get_tree().get_nodes_in_group("targetable"):
-		var node := n as Node3D
-		if node == null:
-			continue
-		var to_n := node.global_position - global_position
-		var dist := to_n.length()
-		if dist > lock_range:
-			continue
-		var angle := cam_forward.angle_to(to_n)
-		var score := dist + angle * 8.0  # kamera yo'nalishiga yaqinlarni afzal ko'radi
-		if score < best_score:
-			best_score = score
-			best = node
-	return best
-
-
-func _set_lock(target: Node3D) -> void:
-	lock_target = target
-	rig.lock_target = target

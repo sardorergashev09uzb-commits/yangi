@@ -10,9 +10,15 @@ func _ready() -> void:
 	_box(Vector3(-8, 0.75, -6), Vector3(6, 1.5, 1), Color(0.55, 0.4, 0.35))
 	var ramp := _box(Vector3(-6, 0.9, 6), Vector3(5, 0.5, 8), Color(0.5, 0.5, 0.45))
 	ramp.rotation_degrees.x = 15
-	# lock-on uchun manekenlar
-	for p in [Vector3(0, 0, -10), Vector3(7, 0, -12), Vector3(-7, 0, -14)]:
-		_dummy(p)
+	# jang sinovi uchun manekenlar
+	for p in [Vector3(0, 0, -6), Vector3(7, 0, -12), Vector3(-7, 0, -14), Vector3(0, 0, -30)]:
+		var d := Dummy.new()
+		d.position = p
+		add_child(d)
+	# salomatlik/o'lim sinovi uchun tuzoq
+	var trap := Trap.new()
+	trap.position = Vector3(5, 0.15, 8)
+	add_child(trap)
 
 
 func _build_environment() -> void:
@@ -62,32 +68,3 @@ func _box(pos: Vector3, size: Vector3, color: Color) -> StaticBody3D:
 	body.add_child(col)
 	add_child(body)
 	return body
-
-
-func _dummy(pos: Vector3) -> void:
-	var body := StaticBody3D.new()
-	body.position = pos
-	body.add_to_group("targetable")
-	var mesh_inst := MeshInstance3D.new()
-	var mesh := CapsuleMesh.new()
-	mesh.radius = 0.4
-	mesh.height = 1.8
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.6, 0.15, 0.15)
-	mesh.material = mat
-	mesh_inst.mesh = mesh
-	mesh_inst.position.y = 0.9
-	var col := CollisionShape3D.new()
-	var shape := CapsuleShape3D.new()
-	shape.radius = 0.4
-	shape.height = 1.8
-	col.shape = shape
-	col.position.y = 0.9
-	var label := Label3D.new()
-	label.text = "Maneken"
-	label.position.y = 2.3
-	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	body.add_child(mesh_inst)
-	body.add_child(col)
-	body.add_child(label)
-	add_child(body)

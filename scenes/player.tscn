@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/player/camera_rig.gd" id="2"]
@@ -17,6 +17,17 @@ size = Vector3(0.2, 0.2, 0.5)
 [sub_resource type="StandardMaterial3D" id="mat"]
 albedo_color = Color(0.75, 0.55, 0.25, 1)
 
+[sub_resource type="BoxShape3D" id="hit_shape"]
+size = Vector3(1.8, 1.4, 1.6)
+
+[sub_resource type="BoxMesh" id="blade_mesh"]
+size = Vector3(0.08, 0.08, 1.2)
+
+[sub_resource type="StandardMaterial3D" id="blade_mat"]
+albedo_color = Color(0.1, 0.1, 0.12, 1)
+metallic = 0.8
+roughness = 0.3
+
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 script = ExtResource("1")
 
@@ -34,6 +45,20 @@ material_override = SubResource("mat")
 [node name="Nose" type="MeshInstance3D" parent="Model"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.4)
 mesh = SubResource("nose_mesh")
+
+[node name="WeaponPivot" type="Node3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1.1, -0.2)
+
+[node name="Blade" type="MeshInstance3D" parent="Model/WeaponPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.65)
+mesh = SubResource("blade_mesh")
+material_override = SubResource("blade_mat")
+
+[node name="Hitbox" type="Area3D" parent="Model"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Model/Hitbox"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -1)
+shape = SubResource("hit_shape")
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2")

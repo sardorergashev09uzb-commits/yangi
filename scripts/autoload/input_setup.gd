@@ -13,9 +13,9 @@ func _ready() -> void:
 	_action("jump", [_key(KEY_X)], [_button(JOY_BUTTON_A)])
 	_action("dodge", [_key(KEY_SPACE)], [_button(JOY_BUTTON_B)])
 	_action("sprint", [_key(KEY_SHIFT)], [_button(JOY_BUTTON_LEFT_STICK)])
-	_action("lock_on", [_key(KEY_Q), _mouse(MOUSE_BUTTON_MIDDLE)], [_button(JOY_BUTTON_RIGHT_STICK)])
-	_action("attack_light", [_mouse(MOUSE_BUTTON_LEFT)], [_button(JOY_BUTTON_X)])
-	_action("attack_heavy", [_mouse(MOUSE_BUTTON_RIGHT)], [_button(JOY_BUTTON_Y)])
+	_action("attack_light", [_mouse(MOUSE_BUTTON_LEFT)], [_button(JOY_BUTTON_X), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
+	_action("attack_heavy", [_key(KEY_R)], [_button(JOY_BUTTON_Y)])
+	_action("aim", [_mouse(MOUSE_BUTTON_RIGHT)], [_axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
 	_action("pause", [_key(KEY_ESCAPE)], [_button(JOY_BUTTON_START)])
 
 
