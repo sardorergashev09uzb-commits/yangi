@@ -122,7 +122,12 @@ func _physics_process(delta: float) -> void:
 		_player = get_tree().get_first_node_in_group("player") as Player
 	_cooldown -= delta
 
-	if state == State.DEAD or _player == null:
+	var player_alive := _player != null and _player.state != Player.State.DEAD
+
+	if state == State.DEAD or _player == null or not player_alive:
+		_release_token()
+		if state != State.DEAD and state != State.IDLE:
+			state = State.IDLE
 		velocity.x = move_toward(velocity.x, 0.0, 20.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 20.0 * delta)
 		velocity.y -= gravity * delta
@@ -133,7 +138,6 @@ func _physics_process(delta: float) -> void:
 	to_player.y = 0.0
 	var dist := to_player.length()
 	var dir := to_player / dist if dist > 0.01 else Vector3.ZERO
-	var player_alive := _player.state != Player.State.DEAD
 
 	match state:
 		State.IDLE:
@@ -382,3 +386,15 @@ func _die() -> void:
 	died.emit(self)
 	await get_tree().create_timer(3.0).timeout
 	queue_free()
+
+
+func reset_to_spawn(spawn_pos: Vector3) -> void:
+	if state == State.DEAD:
+		return
+	global_position = spawn_pos
+	velocity = Vector3.ZERO
+	health = max_health
+	state = State.IDLE
+	_release_token()
+	_update_label()
+

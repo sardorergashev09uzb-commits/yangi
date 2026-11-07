@@ -47,6 +47,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		var k := mouse_sensitivity * (0.7 if aiming else 1.0)
 		yaw -= event.relative.x * k
 		pitch = clampf(pitch - event.relative.y * k, min_pitch, max_pitch)
+	elif event is InputEventMouseButton and event.pressed:
+		# Sichqoncha bosilganda avtomatik kursor o'yinga bog'lanadi (qotib qolmaslik uchun)
+		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed("pause"):
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

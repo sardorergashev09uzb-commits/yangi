@@ -367,12 +367,15 @@ func _hurt(delta: float) -> void:
 
 func _die() -> void:
 	state = State.DEAD
+	Engine.time_scale = 1.0
+	FX.reset()
 	aiming = false
 	rig.aiming = false
 	model.visible = true
 	model.rotation.x = -PI / 2.0
 	died.emit()
-	await get_tree().create_timer(2.5).timeout
+	# ignore_time_scale = true: sekinlashish yoki time_scale ta'sirida qotib qolmasligini ta'minlaydi
+	await get_tree().create_timer(1.8, true, false, true).timeout
 	global_position = _spawn
 	velocity = Vector3.ZERO
 	model.rotation.x = 0.0

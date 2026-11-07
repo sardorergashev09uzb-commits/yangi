@@ -116,7 +116,7 @@ func _physics_process(delta: float) -> void:
 
 	_cooldown -= delta
 
-	if state == State.DEAD or state == State.DORMANT or _player == null:
+	if state == State.DEAD or state == State.DORMANT or _player == null or _player.state == Player.State.DEAD:
 		velocity.x = move_toward(velocity.x, 0.0, 20.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 20.0 * delta)
 		velocity.y -= gravity * delta
@@ -392,3 +392,22 @@ func _die() -> void:
 	t.tween_property(_body, "rotation:x", -PI / 2.0, 0.8)
 	t.parallel().tween_property(_body, "position:y", 0.5, 0.8)
 	t.parallel().tween_property(_weapon_pivot, "position:y", 0.4, 0.8)
+
+
+func reset_boss(spawn_pos: Vector3) -> void:
+	if state == State.DEAD:
+		return
+	global_position = spawn_pos
+	velocity = Vector3.ZERO
+	health = max_health
+	phase = 1
+	state = State.DORMANT
+	_timer = 0.0
+	_cooldown = 1.0
+	_body.rotation = Vector3.ZERO
+	_body.scale = Vector3.ONE
+	_body.position.y = 1.6
+	_weapon_pivot.rotation_degrees = Vector3.ZERO
+	_mat.emission_energy_multiplier = 0.0
+	_weapon_mat.emission_energy_multiplier = 0.0
+

@@ -39,11 +39,12 @@ func _ready() -> void:
 	_charge_bar.visible = false
 
 	_death_label = Label.new()
-	_death_label.text = "Alpamish yiqildi..."
-	_death_label.add_theme_font_size_override("font_size", 48)
-	_death_label.add_theme_color_override("font_color", Color(0.8, 0.1, 0.1))
-	_death_label.set_anchors_preset(Control.PRESET_CENTER)
-	_death_label.position += Vector2(-200, -30)
+	_death_label.text = "ALPAMISH YIQILDI\nQayta tiklanmoqda..."
+	_death_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_death_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_death_label.add_theme_font_size_override("font_size", 44)
+	_death_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2))
+	_death_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_death_label.visible = false
 	add_child(_death_label)
 

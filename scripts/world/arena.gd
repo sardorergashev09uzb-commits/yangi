@@ -4,11 +4,13 @@ extends Node3D
 var _boss: BossSurxayil
 var _arena_gate: StaticBody3D
 var _fight_started := false
+var _boss_spawn := Vector3(0, 0, -90)
+var _enemy_spawns: Array[Dictionary] = []
 
 
 func _ready() -> void:
 	_build_environment()
-	# Asosiy maydon yeri (kengaytirildi)
+	# Asosiy maydon yeri
 	_box(Vector3(0, -0.5, -35), Vector3(100, 1, 150), Color(0.45, 0.38, 0.28))
 
 	# Mashg'ulot to'siqlari va rampasi
@@ -18,17 +20,16 @@ func _ready() -> void:
 	var ramp := _box(Vector3(-6, 0.9, 6), Vector3(5, 0.5, 8), Color(0.5, 0.5, 0.45))
 	ramp.rotation_degrees.x = 15
 
-	# Mashg'ulot manekenlari
-	for p in [Vector3(0, 0, -6), Vector3(7, 0, -12), Vector3(-7, 0, -14)]:
-		var d := Dummy.new()
-		d.position = p
-		add_child(d)
+	# Mashg'ulot yog'ochi (burchakda, dushmanga xalaqit bermaydi)
+	var dummy := Dummy.new()
+	dummy.position = Vector3(8, 0, -2)
+	add_child(dummy)
 
 	# Qalmoq soqchilari (yo'l bo'yida)
-	_enemy(Enemy.Kind.SWORD, Vector3(-4, 0, -22))
-	_enemy(Enemy.Kind.SWORD, Vector3(4, 0, -24))
-	_enemy(Enemy.Kind.SPEAR, Vector3(-3, 0, -32))
-	_enemy(Enemy.Kind.ARCHER, Vector3(5, 0, -38))
+	_spawn_enemy(Enemy.Kind.SWORD, Vector3(-4, 0, -22))
+	_spawn_enemy(Enemy.Kind.SWORD, Vector3(4, 0, -24))
+	_spawn_enemy(Enemy.Kind.SPEAR, Vector3(-3, 0, -32))
+	_spawn_enemy(Enemy.Kind.ARCHER, Vector3(5, 0, -38))
 
 	# Sinov tuzog'i
 	var trap := Trap.new()
@@ -38,6 +39,50 @@ func _ready() -> void:
 	# Surxayil Boss Arenasi (Shimolda, Z = -60 dan -105 gacha)
 	_build_boss_arena()
 
+	# O'yinchi qayta tirilganda arenani tiklash ulanishi
+	_connect_player_respawn.call_deferred()
+
+
+func _connect_player_respawn() -> void:
+	var player := get_tree().get_first_node_in_group("player") as Player
+	if player:
+		player.respawned.connect(_on_player_respawned)
+
+
+func _on_player_respawned() -> void:
+	_fight_started = false
+
+	# Arenadagi darvoza ochiladi
+	if _arena_gate:
+		var t := create_tween()
+		t.tween_property(_arena_gate, "position:y", -6.0, 0.5)
+
+	# Boss tirik bo'lsa, asl joyiga qaytarilib, uxlash holatiga o'tkaziladi
+	if _boss and is_instance_valid(_boss):
+		_boss.reset_boss(_boss_spawn)
+
+	# Tirik qolgan dushmanlar o'z joylariga qaytadi (o'lganlari qayta tug'ilmaydi!)
+	for item in _enemy_spawns:
+		var e: Enemy = item.node
+		if is_instance_valid(e) and not e.is_queued_for_deletion():
+			e.reset_to_spawn(item.pos)
+
+	# Maydondagi eski to'lqin yoki otilgan o'qlarni tozalash
+	for s in get_tree().get_nodes_in_group("projectiles"):
+		if is_instance_valid(s):
+			s.queue_free()
+	for child in get_children():
+		if child is Shockwave:
+			child.queue_free()
+
+
+func _spawn_enemy(kind: Enemy.Kind, pos: Vector3) -> void:
+	var e := Enemy.new()
+	e.kind = kind
+	e.position = pos
+	add_child(e)
+	_enemy_spawns.append({"node": e, "pos": pos})
+
 
 func _build_boss_arena() -> void:
 	var arena_center := Vector3(0, 0, -82)
@@ -45,25 +90,26 @@ func _build_boss_arena() -> void:
 	_box(arena_center + Vector3(0, 0.05, 0), Vector3(46, 0.3, 46), Color(0.32, 0.3, 0.35))
 
 	# Atrof tosh devorlari
-	_box(arena_center + Vector3(0, 3, -23), Vector3(46, 6, 2), Color(0.25, 0.24, 0.28)) # Shimoliy devor
-	_box(arena_center + Vector3(-23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28)) # G'arbiy devor
-	_box(arena_center + Vector3(23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28))  # Sharqiy devor
+	_box(arena_center + Vector3(0, 3, -23), Vector3(46, 6, 2), Color(0.25, 0.24, 0.28))
+	_box(arena_center + Vector3(-23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28))
+	_box(arena_center + Vector3(23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28))
 
-	# Janubiy kirish devori (ikki yonida devor, o'rtada darvoza)
+	# Janubiy kirish devori
 	_box(arena_center + Vector3(-15, 3, 23), Vector3(16, 6, 2), Color(0.25, 0.24, 0.28))
 	_box(arena_center + Vector3(15, 3, 23), Vector3(16, 6, 2), Color(0.25, 0.24, 0.28))
 
-	# Arena ustunlari (to'rt burchakda va ichkarida)
+	# Arena ustunlari
 	for ox in [-14.0, 14.0]:
 		for oz in [-14.0, 14.0]:
 			_pillar(arena_center + Vector3(ox, 0, oz))
 
-	# Darvoza (jang boshlanganda yopiladi)
+	# Darvoza
 	_arena_gate = _box(arena_center + Vector3(0, -6, 23), Vector3(14, 6, 1.5), Color(0.18, 0.12, 0.1))
 
 	# Surxayil Alp bossi
+	_boss_spawn = arena_center + Vector3(0, 0, -8)
 	_boss = BossSurxayil.new()
-	_boss.position = arena_center + Vector3(0, 0, -8)
+	_boss.position = _boss_spawn
 	add_child(_boss)
 	_boss.boss_defeated.connect(_on_boss_defeated)
 
@@ -82,7 +128,7 @@ func _build_boss_arena() -> void:
 
 
 func _on_player_entered_arena(body: Node3D) -> void:
-	if _fight_started or not body is Player:
+	if _fight_started or not body is Player or (_boss and _boss.state == BossSurxayil.State.DEAD):
 		return
 	_fight_started = true
 	_boss.activate()
@@ -93,7 +139,6 @@ func _on_player_entered_arena(body: Node3D) -> void:
 
 
 func _on_boss_defeated() -> void:
-	# Darvoza ochiladi
 	var t := create_tween()
 	t.tween_property(_arena_gate, "position:y", -6.0, 1.2)
 
@@ -122,13 +167,6 @@ func _pillar(pos: Vector3) -> void:
 	col.position.y = 3.0
 	body.add_child(col)
 	add_child(body)
-
-
-func _enemy(kind: Enemy.Kind, pos: Vector3) -> void:
-	var e := Enemy.new()
-	e.kind = kind
-	e.position = pos
-	add_child(e)
 
 
 func _build_environment() -> void:

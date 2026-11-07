@@ -15,7 +15,7 @@ func _ready() -> void:
 	print("dummy at ", dummy.position, " hp ", dummy.health)
 
 	# 1) Qilich: kombo
-	player.global_position = Vector3(0, 0.1, -4.3)
+	player.global_position = Vector3(8, 0.1, -0.4)
 	await _frames(5)
 	player.rig.yaw = 0.0
 	var hp0 := dummy.health
@@ -29,8 +29,9 @@ func _ready() -> void:
 
 	# 2) Kamon
 	await _frames(60)
+	dummy.reset_dummy()
 	var hp1 := dummy.health
-	player.global_position = Vector3(0, 0.1, 0)
+	player.global_position = Vector3(8, 0.1, 7.0)
 	player.rig.pitch = 0.0
 	Input.action_press("aim")
 	await _frames(6)
