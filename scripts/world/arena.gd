@@ -63,16 +63,18 @@ func _on_player_respawned() -> void:
 
 	# Tirik qolgan dushmanlar o'z joylariga qaytadi (o'lganlari qayta tug'ilmaydi!)
 	for item in _enemy_spawns:
-		var e: Enemy = item.node
-		if is_instance_valid(e) and not e.is_queued_for_deletion():
-			e.reset_to_spawn(item.pos)
+		var raw_node: Variant = item.get("node")
+		if is_instance_valid(raw_node):
+			var e := raw_node as Enemy
+			if e != null and not e.is_queued_for_deletion():
+				e.reset_to_spawn(item.pos)
 
 	# Maydondagi eski to'lqin yoki otilgan o'qlarni tozalash
 	for s in get_tree().get_nodes_in_group("projectiles"):
 		if is_instance_valid(s):
 			s.queue_free()
 	for child in get_children():
-		if child is Shockwave:
+		if is_instance_valid(child) and child is Shockwave:
 			child.queue_free()
 
 
@@ -81,7 +83,9 @@ func _spawn_enemy(kind: Enemy.Kind, pos: Vector3) -> void:
 	e.kind = kind
 	e.position = pos
 	add_child(e)
-	_enemy_spawns.append({"node": e, "pos": pos})
+	var dict := {"node": e, "pos": pos}
+	_enemy_spawns.append(dict)
+	e.tree_exited.connect(func(): _enemy_spawns.erase(dict))
 
 
 func _build_boss_arena() -> void:
