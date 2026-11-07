@@ -102,11 +102,11 @@ func _ready() -> void:
 
 	# 1-bosqich zarari
 	boss.take_damage(100.0, player.global_position)
-	_check(boss.health == 250.0, "boss 1-bosqichda noto'g'ri zarar oldi")
+	_check(boss.health == 180.0, "boss 1-bosqichda noto'g'ri zarar oldi")
 	_check(boss.phase == 1, "boss hali 1-bosqichda bo'lishi kerak")
 
-	# 2-bosqichga o'tish (HP <= 50% = 175)
-	boss.take_damage(80.0, player.global_position)
+	# 2-bosqichga o'tish (HP <= 50% = 140)
+	boss.take_damage(50.0, player.global_position)
 	await _frames(2)
 	_check(boss.phase == 2, "boss 2-bosqichga o'tmadi")
 	_check(boss.state == BossSurxayil.State.ROAR, "2-bosqichda roar holati boshlanmadi")

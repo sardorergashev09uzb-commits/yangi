@@ -21,10 +21,10 @@ enum State {
 	DEAD         # Mag'lub bo'ldi
 }
 
-@export var max_health := 350.0
+@export var max_health := 280.0
 @export var gravity := 20.0
 
-var health := 350.0
+var health := 280.0
 var phase := 1
 var state := State.DORMANT
 
@@ -234,15 +234,15 @@ func _tick_slam(dir: Vector3, delta: float) -> void:
 		var to_p := _player.global_position - (global_position + -global_basis.z * 2.2)
 		to_p.y = 0.0
 		if to_p.length() < 2.5:
-			_player.take_damage(32.0 if phase == 1 else 45.0, global_position, 12.0)
+			_player.take_damage(20.0 if phase == 1 else 28.0, global_position, 10.0)
 	elif _timer >= windup + 0.3:
 		_start_recover(0.8 if phase == 1 else 0.5)
 
 
 func _spawn_shockwave() -> void:
 	var sw := Shockwave.new()
-	sw.damage = 18.0 if phase == 1 else 26.0
-	sw.speed = 10.0 if phase == 1 else 13.0
+	sw.damage = 12.0 if phase == 1 else 16.0
+	sw.speed = 9.0 if phase == 1 else 12.0
 	sw.max_radius = 11.0
 	get_tree().current_scene.add_child(sw)
 	sw.global_position = global_position + -global_basis.z * 1.5 + Vector3.UP * 0.1
@@ -283,7 +283,7 @@ func _check_sweep_hit() -> void:
 		var forward := -global_basis.z
 		if forward.angle_to(to_p) < deg_to_rad(100.0):
 			_struck = true
-			_player.take_damage(24.0 if phase == 1 else 34.0, global_position, 9.0)
+			_player.take_damage(16.0 if phase == 1 else 22.0, global_position, 8.0)
 			FX.hit_stop(0.06)
 
 
@@ -319,7 +319,7 @@ func _tick_whirlwind(dir: Vector3, delta: float) -> void:
 		var to_p := _player.global_position - global_position
 		to_p.y = 0.0
 		if to_p.length() <= 4.5:
-			_player.take_damage(20.0, global_position, 10.0)
+			_player.take_damage(12.0, global_position, 8.0)
 			FX.hit_stop(0.05)
 
 	if _spin_count >= 4 or _timer >= 1.6:

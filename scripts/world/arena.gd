@@ -1,11 +1,15 @@
 extends Node3D
-## Test poligoni va Surxayil Boss arenasi.
+## Test poligoni, Surxayil Boss arenasi va Boysun Dashti (Boychibor bilan).
 
 var _boss: BossSurxayil
 var _arena_gate: StaticBody3D
 var _fight_started := false
 var _boss_spawn := Vector3(0, 0, -90)
 var _enemy_spawns: Array[Dictionary] = []
+
+var _horse: Horse
+var _giant: SteppeGiant
+var _giant_spawn := Vector3(38, 0, 48)
 
 
 func _ready() -> void:
@@ -20,7 +24,7 @@ func _ready() -> void:
 	var ramp := _box(Vector3(-6, 0.9, 6), Vector3(5, 0.5, 8), Color(0.5, 0.5, 0.45))
 	ramp.rotation_degrees.x = 15
 
-	# Mashg'ulot yog'ochi (burchakda, dushmanga xalaqit bermaydi)
+	# Mashg'ulot yog'ochi
 	var dummy := Dummy.new()
 	dummy.position = Vector3(8, 0, -2)
 	add_child(dummy)
@@ -36,11 +40,70 @@ func _ready() -> void:
 	trap.position = Vector3(5, 0.15, 8)
 	add_child(trap)
 
+	# Boychibor tulpori (o'yinchi yonida o'tlab turadi)
+	_horse = Horse.new()
+	_horse.position = Vector3(4.5, 0.1, 3.5)
+	add_child(_horse)
+
+	# Katta Boysun Dashti (Janub va Sharq tomonda)
+	_build_steppe()
+
 	# Surxayil Boss Arenasi (Shimolda, Z = -60 dan -105 gacha)
 	_build_boss_arena()
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
+
+
+func _build_steppe() -> void:
+	# Keng yashil-oltin dasht yaylovi
+	var steppe_center := Vector3(40, -0.45, 45)
+	_box(steppe_center, Vector3(140, 0.9, 140), Color(0.42, 0.45, 0.28))
+
+	# Dashtdagi tabiiy qoyalar va tepaliklar
+	_hill(Vector3(20, 1.0, 30), Vector3(14, 2.5, 12))
+	_hill(Vector3(60, 1.8, 55), Vector3(20, 3.8, 18))
+	_hill(Vector3(35, 1.2, 70), Vector3(16, 2.6, 14))
+
+	# Qadimiy tosh balballar (qadimgi obidalar)
+	for bp in [Vector3(15, 0, 45), Vector3(55, 0, 35), Vector3(40, 0, 75)]:
+		_balbal(bp)
+
+	# Dasht Devi (Qoyali Dev)
+	_giant = SteppeGiant.new()
+	_giant.position = _giant_spawn
+	add_child(_giant)
+
+
+func _hill(pos: Vector3, size: Vector3) -> StaticBody3D:
+	var h := _box(pos, size, Color(0.46, 0.44, 0.32))
+	h.rotation_degrees.y = randf_range(0, 45)
+	return h
+
+
+func _balbal(pos: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.position = pos
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.4
+	cyl.bottom_radius = 0.5
+	cyl.height = 3.5
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.5, 0.48, 0.44)
+	cyl.material = mat
+	var mi := MeshInstance3D.new()
+	mi.mesh = cyl
+	mi.position.y = 1.75
+	body.add_child(mi)
+
+	var col := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = 0.55
+	shape.height = 3.5
+	col.shape = shape
+	col.position.y = 1.75
+	body.add_child(col)
+	add_child(body)
 
 
 func _connect_player_respawn() -> void:
@@ -60,6 +123,15 @@ func _on_player_respawned() -> void:
 	# Boss tirik bo'lsa, asl joyiga qaytarilib, uxlash holatiga o'tkaziladi
 	if _boss and is_instance_valid(_boss):
 		_boss.reset_boss(_boss_spawn)
+
+	# Dasht devi tirik bo'lsa, joyiga qaytadi
+	if _giant and is_instance_valid(_giant):
+		_giant.reset_to_spawn(_giant_spawn)
+
+	# Boychibor otdan tushgan bo'lsa, o'yinchi yoniga qaytadi
+	if _horse and is_instance_valid(_horse) and not _horse.is_mounted:
+		_horse.global_position = Vector3(4.5, 0.1, 3.5)
+		_horse.velocity = Vector3.ZERO
 
 	# Tirik qolgan dushmanlar o'z joylariga qaytadi (o'lganlari qayta tug'ilmaydi!)
 	for item in _enemy_spawns:
@@ -137,7 +209,6 @@ func _on_player_entered_arena(body: Node3D) -> void:
 	_fight_started = true
 	_boss.activate()
 
-	# Darvoza ko'tarilib yo'lni to'sadi
 	var t := create_tween()
 	t.tween_property(_arena_gate, "position:y", 3.0, 0.8).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
 
@@ -187,7 +258,7 @@ func _build_environment() -> void:
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.85, 0.72, 0.55)
-	env.fog_density = 0.004
+	env.fog_density = 0.003
 	env.ssao_enabled = true
 	env.glow_enabled = true
 	var we := WorldEnvironment.new()
@@ -198,7 +269,7 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-50, -35, 0)
 	sun.light_color = Color(1.0, 0.92, 0.8)
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 90.0
+	sun.directional_shadow_max_distance = 120.0
 	add_child(sun)
 
 

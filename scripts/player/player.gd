@@ -48,6 +48,8 @@ var health := 100.0
 var stamina := 100.0
 var aiming := false
 var bow_charge := 0.0
+var is_mounted := false
+var mounted_horse: Node3D = null
 
 var invulnerable: bool:
 	get:
@@ -91,6 +93,18 @@ func _physics_process(delta: float) -> void:
 	if _hit_invuln > 0.0:
 		_hit_invuln -= delta
 		model.visible = int(_hit_invuln * 20.0) % 2 == 0 or _hit_invuln <= 0.0
+
+	if is_mounted:
+		# Ot ustida: harakatni ot bajaradi, o'yinchi yuzlanish va kamon bilan jang qiladi
+		_face(_cam_forward(), delta)
+		aiming = Input.is_action_pressed("aim")
+		rig.aiming = aiming
+		if aiming:
+			_bow(delta)
+		else:
+			_cancel_bow()
+		return
+
 	match state:
 		State.NORMAL:
 			_normal(delta)
@@ -150,6 +164,12 @@ func _normal(delta: float) -> void:
 		_cancel_bow()
 		_start_dodge(dir if moving else -_cam_forward())
 		return
+
+	# Otdan foydalanish: Minish (F) yoki Hushtak chalish (H)
+	if Input.is_action_just_pressed("interact"):
+		_try_mount_horse()
+	elif Input.is_action_just_pressed("whistle"):
+		_whistle_horse()
 
 	if aiming:
 		_bow(delta)
@@ -366,6 +386,8 @@ func _hurt(delta: float) -> void:
 
 
 func _die() -> void:
+	if is_mounted and mounted_horse != null:
+		mounted_horse.dismount()
 	state = State.DEAD
 	Engine.time_scale = 1.0
 	FX.reset()
@@ -417,3 +439,21 @@ func _regen(delta: float) -> void:
 	if stamina < max_stamina:
 		stamina = minf(stamina + stamina_regen * delta, max_stamina)
 		stamina_changed.emit(stamina, max_stamina)
+
+
+func _try_mount_horse() -> void:
+	for h in get_tree().get_nodes_in_group("horses"):
+		var horse := h as Horse
+		if horse != null and not horse.is_mounted and global_position.distance_to(horse.global_position) < 3.2:
+			horse.mount(self)
+			return
+
+
+func _whistle_horse() -> void:
+	FX.popup(global_position + Vector3.UP * 2.2, 0.0, Color(0.4, 0.8, 1.0))
+	for h in get_tree().get_nodes_in_group("horses"):
+		var horse := h as Horse
+		if horse != null and not horse.is_mounted:
+			horse.call_horse(self)
+			return
+

@@ -46,9 +46,9 @@ func _ready() -> void:
 
 	var help := Label.new()
 	help.position = Vector2(30, 76)
-	help.text = "WASD - yurish | Sichqoncha - kamera | Shift - yugurish | Space - qochish | X - sakrash\n" \
-			+ "Chap tugma - qilich kombosi | R - og'ir zarba | O'ng tugma - kamon | T - maydonni qayta boshlash\n" \
-			+ "Shimolga (oldinga) yuring: Surxayil Arenasi kutmoqda!"
+	help.text = "WASD - yurish | Sichqoncha - kamera | F - Boychiborga minish/tushish | H - hushtak (otni chaqirish)\n" \
+			+ "Ot ustida Shift - shiddatli galop (16 m/s) | Space / X - sakrash | O'ng tugma - kamon otish\n" \
+			+ "Sharqqa: Katta Boysun Dashti va Qoyali Dev | Shimolga: Surxayil Arenasi | T - qayta boshlash"
 	add_child(help)
 
 	_connect_player.call_deferred()

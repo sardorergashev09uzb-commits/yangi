@@ -16,6 +16,8 @@ func _ready() -> void:
 	_action("attack_light", [_mouse(MOUSE_BUTTON_LEFT)], [_button(JOY_BUTTON_X), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
 	_action("attack_heavy", [_key(KEY_R)], [_button(JOY_BUTTON_Y)])
 	_action("aim", [_mouse(MOUSE_BUTTON_RIGHT)], [_axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
+	_action("interact", [_key(KEY_F)], [_button(JOY_BUTTON_Y)])
+	_action("whistle", [_key(KEY_H)], [_button(JOY_BUTTON_DPAD_UP)])
 	_action("pause", [_key(KEY_ESCAPE)], [_button(JOY_BUTTON_START)])
 
 
