@@ -1,0 +1,30 @@
+; Alpamish - Godot 4.3 project
+config_version=5
+
+[application]
+
+config/name="Alpamish"
+config/description="Alpamish dostoni asosidagi 3D action-RPG"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "Forward Plus")
+
+[autoload]
+
+InputSetup="*res://scripts/autoload/input_setup.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="player"
+3d_physics/layer_3="enemy"
+3d_physics/layer_4="player_hitbox"
+3d_physics/layer_5="enemy_hitbox"
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2

@@ -1,0 +1,46 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/player/camera_rig.gd" id="2"]
+
+[sub_resource type="CapsuleShape3D" id="shape"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="CapsuleMesh" id="body_mesh"]
+radius = 0.35
+height = 1.8
+
+[sub_resource type="BoxMesh" id="nose_mesh"]
+size = Vector3(0.2, 0.2, 0.5)
+
+[sub_resource type="StandardMaterial3D" id="mat"]
+albedo_color = Color(0.75, 0.55, 0.25, 1)
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+script = ExtResource("1")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("shape")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("body_mesh")
+material_override = SubResource("mat")
+
+[node name="Nose" type="MeshInstance3D" parent="Model"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.4)
+mesh = SubResource("nose_mesh")
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("2")
+
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraRig"]
+spring_length = 4.5
+margin = 0.2
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig/SpringArm3D"]
+fov = 70.0
