@@ -21,8 +21,15 @@ var _giant_spawn := Vector3(38, 0, 48)
 
 func _ready() -> void:
 	_build_environment()
-	# Asosiy maydon yeri
-	_box(Vector3(0, -0.5, -35), Vector3(100, 1, 150), Color(0.45, 0.38, 0.28))
+
+	# Yagona yaxlit ulkan Boysun dashti zamini (Z-fighting mutlaqo yo'q)
+	_box(Vector3(20, -1.0, 10), Vector3(320, 2.0, 320), Color(0.42, 0.45, 0.28))
+
+	# Mashg'ulot tosh maydoni (Alpomish boshlang'ich mashq o'rni, Y = 0.01 da tosh to'shama)
+	_box(Vector3(0, 0.01, -2), Vector3(28, 0.02, 28), Color(0.46, 0.43, 0.38))
+
+	# Arena sari olib boruvchi qadimiy tosh yo'lak
+	_box(Vector3(0, 0.01, -38), Vector3(6, 0.02, 44), Color(0.38, 0.36, 0.34))
 
 	# Mashg'ulot to'siqlari va rampasi
 	_box(Vector3(6, 0.5, -4), Vector3(3, 1, 3), Color(0.5, 0.45, 0.4))
@@ -63,18 +70,20 @@ func _ready() -> void:
 
 
 func _build_steppe() -> void:
-	# Keng yashil-oltin dasht yaylovi
-	var steppe_center := Vector3(40, -0.45, 45)
-	_box(steppe_center, Vector3(140, 0.9, 140), Color(0.42, 0.45, 0.28))
-
 	# Dashtdagi tabiiy qoyalar va tepaliklar
-	_hill(Vector3(20, 1.0, 30), Vector3(14, 2.5, 12))
-	_hill(Vector3(60, 1.8, 55), Vector3(20, 3.8, 18))
-	_hill(Vector3(35, 1.2, 70), Vector3(16, 2.6, 14))
+	_hill(Vector3(20, 1.2, 30), Vector3(14, 2.5, 12))
+	_hill(Vector3(60, 2.2, 55), Vector3(24, 4.4, 20))
+	_hill(Vector3(35, 1.5, 75), Vector3(18, 3.0, 16))
+	_hill(Vector3(-25, 1.4, 45), Vector3(16, 2.8, 14))
+	_hill(Vector3(80, 2.5, 20), Vector3(22, 5.0, 18))
 
 	# Qadimiy tosh balballar (qadimgi obidalar)
-	for bp in [Vector3(15, 0, 45), Vector3(55, 0, 35), Vector3(40, 0, 75)]:
+	for bp in [Vector3(15, 0, 45), Vector3(55, 0, 35), Vector3(40, 0, 75), Vector3(70, 0, 80)]:
 		_balbal(bp)
+
+	# Dasht daraxtlari (yulg'un / saksovul)
+	for tp in [Vector3(10, 0, 25), Vector3(30, 0, 50), Vector3(50, 0, 20), Vector3(65, 0, 65), Vector3(25, 0, 85)]:
+		_tree(tp)
 
 	# Dasht Devi (Qoyali Dev)
 	_giant = SteppeGiantScript.new()
@@ -290,6 +299,7 @@ func _box(pos: Vector3, size: Vector3, color: Color) -> StaticBody3D:
 	mesh.size = size
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
+	mat.roughness = 0.85
 	mesh.material = mat
 	mesh_inst.mesh = mesh
 	var col := CollisionShape3D.new()
@@ -300,3 +310,41 @@ func _box(pos: Vector3, size: Vector3, color: Color) -> StaticBody3D:
 	body.add_child(col)
 	add_child(body)
 	return body
+
+
+func _tree(pos: Vector3, h := 4.0) -> void:
+	var trunk := StaticBody3D.new()
+	trunk.position = pos
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.22
+	cyl.bottom_radius = 0.35
+	cyl.height = h
+	var tmat := StandardMaterial3D.new()
+	tmat.albedo_color = Color(0.38, 0.25, 0.15)
+	tmat.roughness = 0.9
+	cyl.material = tmat
+	var mi := MeshInstance3D.new()
+	mi.mesh = cyl
+	mi.position.y = h * 0.5
+	trunk.add_child(mi)
+
+	var col := CollisionShape3D.new()
+	var shape := CylinderShape3D.new()
+	shape.radius = 0.35
+	shape.height = h
+	col.shape = shape
+	col.position.y = h * 0.5
+	trunk.add_child(col)
+
+	var crown := MeshInstance3D.new()
+	var sph := SphereMesh.new()
+	sph.radius = 1.4
+	sph.height = 2.4
+	var cmat := StandardMaterial3D.new()
+	cmat.albedo_color = Color(0.24, 0.35, 0.20)
+	cmat.roughness = 0.85
+	sph.material = cmat
+	crown.mesh = sph
+	crown.position.y = h + 0.6
+	trunk.add_child(crown)
+	add_child(trunk)

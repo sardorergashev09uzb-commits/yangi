@@ -6,7 +6,7 @@ var _stamina_bar: ProgressBar
 var _charge_bar: ProgressBar
 var _crosshair: Label
 var _enemy_label: Label
-var _player: Player
+var _player: CharacterBody3D
 
 # Boss UI elementlari
 var _boss_container: VBoxContainer
@@ -216,29 +216,29 @@ func _make_bar(pos: Vector2, bar_size: Vector2, color: Color) -> ProgressBar:
 
 
 func _connect_player() -> void:
-	_player = get_tree().get_first_node_in_group("player") as Player
+	_player = get_tree().get_first_node_in_group("player") as CharacterBody3D
 	if _player == null:
 		return
-	_health_bar.max_value = _player.max_health
-	_health_bar.value = _player.health
-	_stamina_bar.max_value = _player.max_stamina
-	_player.stamina_changed.connect(func(c: float, m: float) -> void:
+	_health_bar.max_value = _player.get("max_health")
+	_health_bar.value = _player.get("health")
+	_stamina_bar.max_value = _player.get("max_stamina")
+	_player.connect("stamina_changed", func(c: float, m: float) -> void:
 		_stamina_bar.max_value = m
 		_stamina_bar.value = c)
-	_player.health_changed.connect(func(c: float, m: float) -> void:
+	_player.connect("health_changed", func(c: float, m: float) -> void:
 		_health_bar.max_value = m
 		_health_bar.value = c)
-	_player.died.connect(func() -> void:
+	_player.connect("died", func() -> void:
 		_death_panel.visible = true
 		_boss_container.visible = false
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE)
-	_player.respawned.connect(func() -> void:
+	_player.connect("respawned", func() -> void:
 		_death_panel.visible = false
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
 
 
 func _connect_boss() -> void:
-	var boss := get_tree().get_first_node_in_group("bosses") as BossSurxayil
+	var boss := get_tree().get_first_node_in_group("bosses")
 	if boss == null:
 		return
 	boss.boss_activated.connect(_on_boss_activated)
@@ -281,7 +281,9 @@ func _process(_delta: float) -> void:
 	_enemy_label.text = "Dushmanlar: %d" % enemies_count
 	if _player == null:
 		return
-	_crosshair.visible = _player.aiming
-	_charge_bar.visible = _player.aiming and _player.bow_charge > 0.0
+	var is_aim: bool = bool(_player.get("aiming"))
+	var charge: float = float(_player.get("bow_charge"))
+	_crosshair.visible = is_aim
+	_charge_bar.visible = is_aim and charge > 0.0
 	_charge_bar.max_value = 1.0
-	_charge_bar.value = _player.bow_charge
+	_charge_bar.value = charge

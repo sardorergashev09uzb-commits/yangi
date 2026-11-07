@@ -24,6 +24,7 @@ var _prompt_label: Label3D
 var _body_mesh: Node3D
 var _legs: Array[Node3D] = []
 var _anim_time := 0.0
+var _mount_cooldown := 0.0
 
 
 func _ready() -> void:
@@ -141,6 +142,9 @@ func _build_visuals() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _mount_cooldown > 0.0:
+		_mount_cooldown -= delta
+
 	if is_mounted and rider != null:
 		_process_mounted(delta)
 	elif is_called and _follow_target != null:
@@ -150,14 +154,19 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_animate_legs(delta)
-	_update_prompt()
+
+	# Chavandozni silkinishsiz aynan egar ustida ushlab turish
+	if is_mounted and rider != null:
+		rider.global_position = _saddle.global_position
+	else:
+		_update_prompt()
 
 
 func _process_mounted(delta: float) -> void:
 	_prompt_label.visible = false
 
-	# Tushish (Dismount)
-	if Input.is_action_just_pressed("interact"):
+	# Tushish (Dismount) - cooldown bilan bir freymda qayta tushib ketishning oldi olinadi
+	if _mount_cooldown <= 0.0 and Input.is_action_just_pressed("interact"):
 		dismount()
 		return
 
@@ -191,9 +200,6 @@ func _process_mounted(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	# Chavandozni egar ustida ushlab turish
-	rider.global_position = _saddle.global_position
-
 
 func _process_calling(delta: float) -> void:
 	var to_target := _follow_target.global_position - global_position
@@ -204,8 +210,9 @@ func _process_calling(delta: float) -> void:
 		var dir := to_target.normalized()
 		var target_yaw := atan2(-dir.x, -dir.z)
 		rotation.y = lerp_angle(rotation.y, target_yaw, 1.0 - exp(-turn_speed * delta))
-		velocity.x = -global_basis.z.x * 12.0
-		velocity.z = -global_basis.z.z * 12.0
+		var fwd := -global_basis.z
+		velocity.x = fwd.x * 12.0
+		velocity.z = fwd.z * 12.0
 	else:
 		is_called = false
 		velocity = Vector3.ZERO
@@ -245,12 +252,19 @@ func _update_prompt() -> void:
 		_prompt_label.visible = false
 		return
 	var dist := global_position.distance_to(p.global_position)
-	_prompt_label.visible = dist < 3.2
+	_prompt_label.visible = dist < 4.5
 
 
 func mount(p: CharacterBody3D) -> void:
+	if is_mounted or p == null:
+		return
 	is_mounted = true
 	rider = p
+	_mount_cooldown = 0.4
+	# O'yinchi kolliziyasini vaqtincha to'xtatish (ot tanasi bilan qisilib qolmasligi uchun)
+	rider.collision_layer = 0
+	rider.collision_mask = 0
+	rider.velocity = Vector3.ZERO
 	rider.set("is_mounted", true)
 	rider.set("mounted_horse", self)
 	is_called = false
@@ -261,12 +275,16 @@ func mount(p: CharacterBody3D) -> void:
 func dismount() -> void:
 	if not is_mounted or rider == null:
 		return
-	var drop_pos := global_position + global_basis.x * 1.6
+	var drop_pos := global_position + global_basis.x * 1.8
 	rider.global_position = drop_pos
+	rider.collision_layer = 1 << 1 # layer 2 (player)
+	rider.collision_mask = 1 | (1 << 2) # layer 1 (world) + layer 3 (enemy)
+	rider.velocity = Vector3.ZERO
 	rider.set("is_mounted", false)
 	rider.set("mounted_horse", null)
 	is_mounted = false
 	rider = null
+	_mount_cooldown = 0.4
 	mounted_state_changed.emit(false)
 
 

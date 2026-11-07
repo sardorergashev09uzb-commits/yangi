@@ -96,6 +96,7 @@ func _physics_process(delta: float) -> void:
 
 	if is_mounted:
 		# Ot ustida: harakatni ot bajaradi, o'yinchi yuzlanish va kamon bilan jang qiladi
+		velocity = Vector3.ZERO
 		_face(_cam_forward(), delta)
 		aiming = Input.is_action_pressed("aim")
 		rig.aiming = aiming
@@ -443,7 +444,7 @@ func _regen(delta: float) -> void:
 
 func _try_mount_horse() -> void:
 	for h in get_tree().get_nodes_in_group("horses"):
-		if h != null and h.has_method("mount") and not h.get("is_mounted") and global_position.distance_to(h.global_position) < 3.2:
+		if h != null and h.has_method("mount") and not h.get("is_mounted") and global_position.distance_to(h.global_position) < 4.5:
 			h.mount(self)
 			return
 
