@@ -11,14 +11,26 @@ func _ready() -> void:
 	var ramp := _box(Vector3(-6, 0.9, 6), Vector3(5, 0.5, 8), Color(0.5, 0.5, 0.45))
 	ramp.rotation_degrees.x = 15
 	# jang sinovi uchun manekenlar
-	for p in [Vector3(0, 0, -6), Vector3(7, 0, -12), Vector3(-7, 0, -14), Vector3(0, 0, -30)]:
+	for p in [Vector3(0, 0, -6), Vector3(7, 0, -12), Vector3(-7, 0, -14)]:
 		var d := Dummy.new()
 		d.position = p
 		add_child(d)
+	# qalmoq askarlari
+	_enemy(Enemy.Kind.SWORD, Vector3(-3, 0, -24))
+	_enemy(Enemy.Kind.SWORD, Vector3(3, 0, -26))
+	_enemy(Enemy.Kind.SPEAR, Vector3(0, 0, -28))
+	_enemy(Enemy.Kind.ARCHER, Vector3(0, 0, -36))
 	# salomatlik/o'lim sinovi uchun tuzoq
 	var trap := Trap.new()
 	trap.position = Vector3(5, 0.15, 8)
 	add_child(trap)
+
+
+func _enemy(kind: Enemy.Kind, pos: Vector3) -> void:
+	var e := Enemy.new()
+	e.kind = kind
+	e.position = pos
+	add_child(e)
 
 
 func _build_environment() -> void:

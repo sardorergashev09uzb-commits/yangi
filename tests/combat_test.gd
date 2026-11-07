@@ -48,6 +48,46 @@ func _ready() -> void:
 	_check(player.state == Player.State.DEAD, "o'lmadi")
 	await get_tree().create_timer(3.0, true, false, true).timeout
 	_check(player.state == Player.State.NORMAL and player.health > 0.0, "tirilmadi")
+	# 4) Dushman AI: qilichchi o'yinchini kuzatib, hujum qiladi va zarar beradi
+	for e in get_tree().get_nodes_in_group("enemies"):
+		e.queue_free()
+	await _frames(3)
+	player.global_position = Vector3(20, 0.1, 20)
+	player.velocity = Vector3.ZERO
+	await _frames(5)
+	var foe := Enemy.new()
+	foe.kind = Enemy.Kind.SWORD
+	foe.position = Vector3(20, 0, 15)
+	main.add_child(foe)
+	var hp2 := player.health
+	var t := 0
+	while player.health >= hp2 and t < 600:
+		await _frames(1)
+		t += 1
+	print("sword hit player after frames: ", t, " hp ", player.health)
+	_check(player.health < hp2, "qilichchi zarar bermadi")
+
+	# 5) Kamonchi
+	foe.queue_free()
+	await _frames(70)
+	player.health = player.max_health
+	player.global_position = Vector3(20, 0.1, 20)
+	await _frames(5)
+	var archer := Enemy.new()
+	archer.kind = Enemy.Kind.ARCHER
+	archer.position = Vector3(20, 0, 8)
+	main.add_child(archer)
+	hp2 = player.health
+	t = 0
+	while player.health >= hp2 and t < 600:
+		await _frames(1)
+		t += 1
+	print("arrow hit player after frames: ", t, " hp ", player.health)
+	_check(player.health < hp2, "kamonchi zarar bermadi")
+
+	# 6) Dushmanni o'ldirish
+	archer.take_damage(1000.0, player.global_position, 5.0)
+	_check(archer.state == Enemy.State.DEAD, "dushman o'lmadi")
 	print("TESTLAR O'TDI")
 	get_tree().quit(0)
 

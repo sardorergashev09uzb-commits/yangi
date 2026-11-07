@@ -7,6 +7,7 @@ var _charge_bar: ProgressBar
 var _crosshair: Label
 var _death_label: Label
 var _player: Player
+var _enemy_label: Label
 
 
 func _ready() -> void:
@@ -34,9 +35,14 @@ func _ready() -> void:
 	_death_label.visible = false
 	add_child(_death_label)
 
+	_enemy_label = Label.new()
+	_enemy_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_enemy_label.position = Vector2(-220, 28)
+	add_child(_enemy_label)
+
 	var help := Label.new()
 	help.position = Vector2(30, 76)
-	help.text = "WASD - yurish | Sichqoncha - kamera/burilish | Shift - yugurish | Space - qochish | X - sakrash\n" \
+	help.text = "WASD - yurish | Sichqoncha - kamera/burilish | Shift - yugurish | Space - qochish | X - sakrash\nFaqat sichqoncha personaj yuzini buradi, WASD faqat harakat\n" \
 			+ "Chap tugma - qilich kombosi (3 zarba) | R - og'ir zarba | O'ng tugma ushlab - kamon, chap tugmani ushlab qo'yib yuborish - otish\n" \
 			+ "Esc - sichqoncha"
 	add_child(help)
@@ -78,6 +84,7 @@ func _connect_player() -> void:
 
 
 func _process(_delta: float) -> void:
+	_enemy_label.text = "Dushmanlar: %d" % get_tree().get_nodes_in_group("enemies").size()
 	if _player == null:
 		return
 	_crosshair.visible = _player.aiming

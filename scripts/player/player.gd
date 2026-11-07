@@ -143,18 +143,12 @@ func _normal(delta: float) -> void:
 	else:
 		velocity.y -= gravity * delta
 
-	# Yuzlanish: nishonlashda va turganda kamera tomoniga (sichqoncha bilan buriladi),
-	# yurganda harakat tomoniga.
-	if aiming:
-		_face(_cam_forward(), delta)
-	elif moving:
-		_face(dir, delta)
-	else:
-		_face(_cam_forward(), delta)
+	# Yuzlanish faqat sichqoncha (kamera) bilan boshqariladi; WASD faqat harakat.
+	_face(_cam_forward(), delta)
 
 	if Input.is_action_just_pressed("dodge") and is_on_floor() and stamina >= dodge_cost:
 		_cancel_bow()
-		_start_dodge(dir if moving else -model.global_basis.z)
+		_start_dodge(dir if moving else -_cam_forward())
 		return
 
 	if aiming:
@@ -221,9 +215,7 @@ func _start_attack(heavy: bool, index: int) -> void:
 	_buffer_heavy = 0.0
 	_use_stamina(_attack.cost)
 
-	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, rig.yaw)
-	_attack_dir = dir.normalized() if dir.length() > 0.1 else _cam_forward()
+	_attack_dir = _cam_forward()
 	_face(_attack_dir, 1.0 / 60.0, true)
 	state = State.ATTACK
 
@@ -247,7 +239,9 @@ func _attack_tick(delta: float) -> void:
 	if _attack_time >= windup and Input.is_action_just_pressed("dodge") \
 			and stamina >= dodge_cost and is_on_floor():
 		_end_attack()
-		_start_dodge(_attack_dir)
+		var di := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		var dd := Vector3(di.x, 0.0, di.y).rotated(Vector3.UP, rig.yaw)
+		_start_dodge(dd if dd.length() > 0.1 else -_cam_forward())
 		return
 
 	# Vaqt oynasiga qarab harakat: tayyorlanish (to'xtash), zarba (oldinga siljish), tiklanish
@@ -320,7 +314,6 @@ func _start_dodge(dir: Vector3) -> void:
 	_dodge_timer = 0.0
 	state = State.DODGE
 	_dodge_invuln = true
-	_face(_dodge_dir, 1.0 / 60.0, true)
 
 
 func _dodge(delta: float) -> void:

@@ -6,6 +6,7 @@ var velocity := Vector3.ZERO
 var damage := 20.0
 var shooter: CollisionObject3D
 var gravity := 7.0
+var hit_mask := 1 | (1 << 2)  # dunyo + dushman; dushman o'qlari uchun dunyo + o'yinchi
 
 var _life := 6.0
 var _stuck := false
@@ -35,7 +36,7 @@ func _physics_process(delta: float) -> void:
 	var from := global_position
 	velocity.y -= gravity * delta
 	var to := from + velocity * delta
-	var query := PhysicsRayQueryParameters3D.create(from, to, 1 | (1 << 2))
+	var query := PhysicsRayQueryParameters3D.create(from, to, hit_mask)
 	if shooter:
 		query.exclude = [shooter.get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
