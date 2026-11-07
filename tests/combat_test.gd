@@ -1,6 +1,6 @@
 extends Node
 ## Headless sinov: godot --headless --path . res://tests/combat_test.tscn
-## Qilich kombosi, kamon va tuzoqdan zarar olishni tekshiradi.
+## Qilich kombosi, kamon, dushman AI va Surxayil Boss jangini tekshiradi.
 
 var main: Node
 var player: Player
@@ -48,9 +48,11 @@ func _ready() -> void:
 	_check(player.state == Player.State.DEAD, "o'lmadi")
 	await get_tree().create_timer(3.0, true, false, true).timeout
 	_check(player.state == Player.State.NORMAL and player.health > 0.0, "tirilmadi")
-	# 4) Dushman AI: qilichchi o'yinchini kuzatib, hujum qiladi va zarar beradi
+
+	# 4) Dushman AI: qilichchi
 	for e in get_tree().get_nodes_in_group("enemies"):
-		e.queue_free()
+		if not e is BossSurxayil:
+			e.queue_free()
 	await _frames(3)
 	player.global_position = Vector3(20, 0.1, 20)
 	player.velocity = Vector3.ZERO
@@ -84,16 +86,44 @@ func _ready() -> void:
 		t += 1
 	print("arrow hit player after frames: ", t, " hp ", player.health)
 	_check(player.health < hp2, "kamonchi zarar bermadi")
-
-	# 6) Dushmanni o'ldirish
 	archer.take_damage(1000.0, player.global_position, 5.0)
-	_check(archer.state == Enemy.State.DEAD, "dushman o'lmadi")
-	print("TESTLAR O'TDI")
+
+	# 6) Surxayil Alp Boss jangi
+	var boss := get_tree().get_first_node_in_group("bosses") as BossSurxayil
+	_check(boss != null, "boss topilmadi")
+	_check(boss.state == BossSurxayil.State.DORMANT, "boss dastlab dormant bo'lishi kerak")
+
+	# Arenaga kirish
+	player.global_position = Vector3(0, 0.1, -64)
+	await _frames(10)
+	_check(boss.state != BossSurxayil.State.DORMANT, "arenaga kirganda boss uyg'onmadi")
+	print("Boss uyg'ondi: hp ", boss.health)
+
+	# 1-bosqich zarari
+	boss.take_damage(100.0, player.global_position)
+	_check(boss.health == 250.0, "boss 1-bosqichda noto'g'ri zarar oldi")
+	_check(boss.phase == 1, "boss hali 1-bosqichda bo'lishi kerak")
+
+	# 2-bosqichga o'tish (HP <= 50% = 175)
+	boss.take_damage(80.0, player.global_position)
+	await _frames(2)
+	_check(boss.phase == 2, "boss 2-bosqichga o'tmadi")
+	_check(boss.state == BossSurxayil.State.ROAR, "2-bosqichda roar holati boshlanmadi")
+	print("Boss 2-bosqichga o'tdi: phase ", boss.phase, " state ", boss.state)
+
+	# Bossni yengish
+	boss.take_damage(500.0, player.global_position)
+	_check(boss.state == BossSurxayil.State.DEAD, "boss o'lmadi")
+	print("Boss mag'lub etildi: state ", boss.state)
+
+	print("BARCHA TESTLAR MUVAFFAQ QIYATLI O'TDI!")
 	get_tree().quit(0)
+
 
 func _frames(n: int) -> void:
 	for i in n:
 		await get_tree().physics_frame
+
 
 func _check(ok: bool, msg: String) -> void:
 	if not ok:
