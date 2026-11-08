@@ -11,6 +11,8 @@ const YurtScript = preload("res://scripts/world/yurt.gd")
 const NPCScript = preload("res://scripts/world/npc.gd")
 const DialogBoxScript = preload("res://scripts/story/dialog_box.gd")
 const QuestSystemScript = preload("res://scripts/story/quest_system.gd")
+const ProgressionScript = preload("res://scripts/player/progression.gd")
+const PauseMenuScript = preload("res://scripts/ui/pause_menu.gd")
 
 var _boss: CharacterBody3D
 var _arena_gate: StaticBody3D
@@ -25,6 +27,13 @@ var _giant_spawn := Vector3(38, 0, 48)
 
 func _ready() -> void:
 	_build_environment()
+
+	# RPG Rivojlanish va Pauza / Ko'nikmalar menyusi
+	var prog = ProgressionScript.new()
+	add_child(prog)
+
+	var pause_menu = PauseMenuScript.new()
+	add_child(pause_menu)
 
 	# Kvest va Dialog tizimi
 	var qsystem = QuestSystemScript.new()

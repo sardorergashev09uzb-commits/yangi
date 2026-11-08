@@ -191,7 +191,11 @@ func _bow(delta: float) -> void:
 			_drawing = true
 			bow_charge = 0.0
 		return
-	bow_charge = minf(bow_charge + delta / BOW_DRAW_TIME, 1.0)
+	var draw_spd := BOW_DRAW_TIME
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("bow_mastery", false):
+		draw_spd *= 0.55
+	bow_charge = minf(bow_charge + delta / draw_spd, 1.0)
 	if Input.is_action_just_released("attack_light"):
 		if bow_charge > 0.15:
 			_fire_bow(bow_charge)
@@ -215,7 +219,11 @@ func _fire_bow(charge: float) -> void:
 	var spawn := global_position + Vector3.UP * 1.45 + fwd * 0.6
 	var arrow := Arrow.new()
 	arrow.shooter = self
-	arrow.damage = lerpf(14.0, 40.0, charge)
+	var base_dmg := lerpf(14.0, 40.0, charge)
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("bow_mastery", false):
+		base_dmg *= 1.4
+	arrow.damage = base_dmg
 	arrow.velocity = (target - spawn).normalized() * lerpf(28.0, 55.0, charge)
 	get_tree().current_scene.add_child(arrow)
 	arrow.global_position = spawn
@@ -293,12 +301,16 @@ func _attack_tick(delta: float) -> void:
 
 
 func _check_hits() -> void:
+	var dmg: float = _attack.damage
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("sword_mastery", false):
+		dmg *= 1.35
 	for b in hitbox.get_overlapping_bodies():
 		if b == self or b in _hit_list or not b.has_method("take_damage"):
 			continue
 		_hit_list.append(b)
 		var knock := 9.0 if _attack_heavy else 5.0
-		b.take_damage(_attack.damage, global_position, knock)
+		b.take_damage(dmg, global_position, knock)
 		FX.hit_stop(0.12 if _attack_heavy else 0.07)
 		rig.shake(0.3 if _attack_heavy else 0.15)
 

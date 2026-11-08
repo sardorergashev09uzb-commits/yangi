@@ -390,6 +390,9 @@ func _die() -> void:
 	var qsystem = get_tree().get_first_node_in_group("quest_system")
 	if qsystem and qsystem.has_method("complete_quest"):
 		qsystem.complete_quest("boss")
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.has_method("add_xp"):
+		prog.add_xp(250)
 
 	FX.hit_stop(0.25)
 	var t := create_tween()

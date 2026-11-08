@@ -25,6 +25,7 @@ var _body_mesh: Node3D
 var _legs: Array[Node3D] = []
 var _anim_time := 0.0
 var _mount_cooldown := 0.0
+var _trample_cooldown := 0.0
 
 
 func _ready() -> void:
@@ -199,6 +200,24 @@ func _process_mounted(delta: float) -> void:
 
 	if not is_on_floor():
 		velocity.y -= gravity * delta
+
+	# Ot chopganda dushmanlarni urib yiqitish (Trample)
+	if _trample_cooldown > 0.0:
+		_trample_cooldown -= delta
+	elif galloping:
+		_check_trample()
+
+
+func _check_trample() -> void:
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e and is_instance_valid(e) and e.has_method("take_damage"):
+			if global_position.distance_to(e.global_position) < 2.5:
+				var hit_dir := -global_basis.z
+				e.take_damage(22.0, global_position, 8.0)
+				FX.hit_stop(0.04)
+				FX.camera_shake(0.35)
+				_trample_cooldown = 0.35
+				return
 
 
 func _process_calling(delta: float) -> void:

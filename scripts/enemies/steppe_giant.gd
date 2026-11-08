@@ -219,6 +219,9 @@ func _die() -> void:
 	var qsystem = get_tree().get_first_node_in_group("quest_system")
 	if qsystem and qsystem.has_method("complete_quest"):
 		qsystem.complete_quest("giant")
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.has_method("add_xp"):
+		prog.add_xp(90)
 	var t := create_tween()
 	t.tween_property(_body, "rotation:x", -PI / 2.0, 0.6)
 	t.parallel().tween_property(_body, "position:y", 0.8, 0.6)

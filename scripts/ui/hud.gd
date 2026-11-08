@@ -27,10 +27,31 @@ var _banner_title: Label
 var _banner_sub: Label
 var _banner_tween: Tween
 
+# XP va Level UI
+var _xp_bar: ProgressBar
+var _lvl_label: Label
+var _skill_hint: Label
+
 
 func _ready() -> void:
-	_health_bar = _make_bar(Vector2(30, 28), Vector2(320, 18), Color(0.8, 0.15, 0.15))
-	_stamina_bar = _make_bar(Vector2(30, 52), Vector2(260, 12), Color(0.3, 0.75, 0.3))
+	_health_bar = _make_bar(Vector2(30, 24), Vector2(320, 16), Color(0.85, 0.15, 0.15))
+	_stamina_bar = _make_bar(Vector2(30, 44), Vector2(260, 10), Color(0.3, 0.75, 0.3))
+	_xp_bar = _make_bar(Vector2(30, 58), Vector2(200, 8), Color(0.65, 0.35, 0.95))
+
+	_lvl_label = Label.new()
+	_lvl_label.text = "LVL 1 (0/100 XP)"
+	_lvl_label.position = Vector2(238, 52)
+	_lvl_label.add_theme_font_size_override("font_size", 12)
+	_lvl_label.add_theme_color_override("font_color", Color(0.9, 0.85, 1.0))
+	add_child(_lvl_label)
+
+	_skill_hint = Label.new()
+	_skill_hint.text = "★ [ TAB ] - Yangi ko'nikma ochkosi!"
+	_skill_hint.position = Vector2(30, 70)
+	_skill_hint.add_theme_font_size_override("font_size", 13)
+	_skill_hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	_skill_hint.visible = false
+	add_child(_skill_hint)
 
 	_enemy_label = Label.new()
 	_enemy_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
@@ -56,15 +77,16 @@ func _ready() -> void:
 	_setup_victory_ui()
 
 	var help := Label.new()
-	help.position = Vector2(30, 76)
-	help.text = "WASD - yurish | Sichqoncha - kamera | E - suhbatlashish | F - Boychiborga minish/tushish | H - hushtak\n" \
-			+ "Ot ustida Shift - shiddatli galop (16 m/s) | Space / X - sakrash | O'ng tugma - kamon otish\n" \
+	help.position = Vector2(30, 92)
+	help.text = "WASD - yurish | Sichqoncha - kamera | TAB - ko'nikmalar & pauza | E - suhbatlashish | F - Boychibor | H - hushtak\n" \
+			+ "Ot ustida Shift - shiddatli galop (16 m/s) va toptash (trample) | Space / X - sakrash | O'ng tugma - kamon otish\n" \
 			+ "Sharqqa: Boysun O'tovi, Qultoy Cho'pon va Dev | Shimolga: Surxayil Arenasi | T - qayta boshlash"
 	add_child(help)
 
 	_connect_player.call_deferred()
 	_connect_boss.call_deferred()
 	_connect_quests.call_deferred()
+	_connect_progression.call_deferred()
 
 
 func _setup_game_over_ui() -> void:
@@ -399,3 +421,21 @@ func _connect_quests() -> void:
 		if not q.is_empty():
 			_quest_title_label.text = q.get("title", "")
 			_quest_desc_label.text = q.get("desc", "")
+
+
+func _connect_progression() -> void:
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog == null:
+		return
+	if prog.has_signal("xp_gained"):
+		prog.connect("xp_gained", func(c_xp: int, n_xp: int):
+			_xp_bar.max_value = n_xp
+			_xp_bar.value = c_xp
+			_lvl_label.text = "LVL %d (%d/%d XP)" % [prog.get("level"), c_xp, n_xp])
+	if prog.has_signal("level_up"):
+		prog.connect("level_up", func(lvl: int, sp: int):
+			_lvl_label.text = "LVL %d" % lvl
+			_skill_hint.visible = sp > 0)
+	if prog.has_signal("skill_unlocked"):
+		prog.connect("skill_unlocked", func(_id: String):
+			_skill_hint.visible = prog.get("skill_points") > 0)

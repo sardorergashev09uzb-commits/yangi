@@ -384,6 +384,9 @@ func _die() -> void:
 	t.tween_property(_body, "rotation:x", -PI / 2.0, 0.35)
 	t.parallel().tween_property(_body, "position:y", 0.4, 0.35)
 	died.emit(self)
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.has_method("add_xp"):
+		prog.add_xp(30)
 	await get_tree().create_timer(3.0).timeout
 	queue_free()
 
