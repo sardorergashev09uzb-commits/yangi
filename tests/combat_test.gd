@@ -34,7 +34,12 @@ func _ready() -> void:
 	player.global_position = Vector3(8, 0.1, 7.0)
 	player.rig.pitch = 0.0
 	Input.action_press("aim")
-	await _frames(6)
+	await _frames(30)
+	# Kamera yelka tomonga siljigan: crosshair dummyga tushishi uchun o'yinchini moslaymiz
+	for i in 3:
+		var aim: Dictionary = player.rig.get_aim_target(140.0, [player.get_rid()])
+		player.global_position.x += dummy.global_position.x - aim.target.x
+		await _frames(15)
 	Input.action_press("attack_light")
 	await _frames(60)
 	Input.action_release("attack_light")
@@ -55,12 +60,12 @@ func _ready() -> void:
 		if not e is BossSurxayil:
 			e.queue_free()
 	await _frames(3)
-	player.global_position = Vector3(20, 0.1, 20)
+	player.global_position = Vector3(-22, 0.1, -4)
 	player.velocity = Vector3.ZERO
 	await _frames(5)
 	var foe := Enemy.new()
 	foe.kind = Enemy.Kind.SWORD
-	foe.position = Vector3(20, 0, 15)
+	foe.position = Vector3(-22, 0, -9)
 	main.add_child(foe)
 	var hp2 := player.health
 	var t := 0
@@ -74,11 +79,11 @@ func _ready() -> void:
 	foe.queue_free()
 	await _frames(70)
 	player.health = player.max_health
-	player.global_position = Vector3(20, 0.1, 20)
+	player.global_position = Vector3(-22, 0.1, -4)
 	await _frames(5)
 	var archer := Enemy.new()
 	archer.kind = Enemy.Kind.ARCHER
-	archer.position = Vector3(20, 0, 8)
+	archer.position = Vector3(-22, 0, -15)
 	main.add_child(archer)
 	hp2 = player.health
 	t = 0
