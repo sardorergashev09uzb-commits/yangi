@@ -270,6 +270,9 @@ func mount(p: CharacterBody3D) -> void:
 	is_called = false
 	_prompt_label.visible = false
 	mounted_state_changed.emit(true)
+	var qsystem = get_tree().get_first_node_in_group("quest_system")
+	if qsystem and qsystem.has_method("complete_quest"):
+		qsystem.complete_quest("boychibor")
 
 
 func dismount() -> void:

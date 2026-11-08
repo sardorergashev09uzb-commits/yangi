@@ -387,6 +387,9 @@ func _die() -> void:
 	_mat.emission_energy_multiplier = 0.0
 	_weapon_mat.emission_energy_multiplier = 0.0
 	boss_defeated.emit()
+	var qsystem = get_tree().get_first_node_in_group("quest_system")
+	if qsystem and qsystem.has_method("complete_quest"):
+		qsystem.complete_quest("boss")
 
 	FX.hit_stop(0.25)
 	var t := create_tween()

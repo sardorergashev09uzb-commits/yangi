@@ -18,6 +18,15 @@ var _boss_phase_label: Label
 var _death_panel: Panel
 var _victory_panel: Panel
 
+# Kvest va Banner UI
+var _quest_container: VBoxContainer
+var _quest_title_label: Label
+var _quest_desc_label: Label
+var _banner_panel: PanelContainer
+var _banner_title: Label
+var _banner_sub: Label
+var _banner_tween: Tween
+
 
 func _ready() -> void:
 	_health_bar = _make_bar(Vector2(30, 28), Vector2(320, 18), Color(0.8, 0.15, 0.15))
@@ -40,19 +49,22 @@ func _ready() -> void:
 	_charge_bar.position += Vector2(-60, 30)
 	_charge_bar.visible = false
 
+	_setup_quest_ui()
+	_setup_banner_ui()
 	_setup_boss_ui()
 	_setup_game_over_ui()
 	_setup_victory_ui()
 
 	var help := Label.new()
 	help.position = Vector2(30, 76)
-	help.text = "WASD - yurish | Sichqoncha - kamera | F - Boychiborga minish/tushish | H - hushtak (otni chaqirish)\n" \
+	help.text = "WASD - yurish | Sichqoncha - kamera | E - suhbatlashish | F - Boychiborga minish/tushish | H - hushtak\n" \
 			+ "Ot ustida Shift - shiddatli galop (16 m/s) | Space / X - sakrash | O'ng tugma - kamon otish\n" \
-			+ "Sharqqa: Katta Boysun Dashti va Qoyali Dev | Shimolga: Surxayil Arenasi | T - qayta boshlash"
+			+ "Sharqqa: Boysun O'tovi, Qultoy Cho'pon va Dev | Shimolga: Surxayil Arenasi | T - qayta boshlash"
 	add_child(help)
 
 	_connect_player.call_deferred()
 	_connect_boss.call_deferred()
+	_connect_quests.call_deferred()
 
 
 func _setup_game_over_ui() -> void:
@@ -287,3 +299,103 @@ func _process(_delta: float) -> void:
 	_charge_bar.visible = is_aim and charge > 0.0
 	_charge_bar.max_value = 1.0
 	_charge_bar.value = charge
+
+
+func _setup_quest_ui() -> void:
+	_quest_container = VBoxContainer.new()
+	_quest_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_quest_container.offset_left = -340
+	_quest_container.offset_right = -30
+	_quest_container.offset_top = 58
+	_quest_container.offset_bottom = 150
+	add_child(_quest_container)
+
+	var header := Label.new()
+	header.text = "DOSTON VAZIFASI"
+	header.add_theme_font_size_override("font_size", 13)
+	header.add_theme_color_override("font_color", Color(1.0, 0.75, 0.2))
+	_quest_container.add_child(header)
+
+	_quest_title_label = Label.new()
+	_quest_title_label.text = "1. Qultoy Cho'pon sadosi"
+	_quest_title_label.add_theme_font_size_override("font_size", 16)
+	_quest_title_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.85))
+	_quest_container.add_child(_quest_title_label)
+
+	_quest_desc_label = Label.new()
+	_quest_desc_label.text = "Boysun o'toviga boring va Qultoy bilan gaplashing [ E ]"
+	_quest_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_quest_desc_label.add_theme_font_size_override("font_size", 13)
+	_quest_desc_label.add_theme_color_override("font_color", Color(0.85, 0.82, 0.75))
+	_quest_container.add_child(_quest_desc_label)
+
+
+func _setup_banner_ui() -> void:
+	_banner_panel = PanelContainer.new()
+	_banner_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_banner_panel.offset_top = 40
+	_banner_panel.offset_left = -220
+	_banner_panel.offset_right = 220
+	_banner_panel.offset_bottom = 110
+
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.06, 0.05, 0.92)
+	style.border_width_left = 2
+	style.border_width_right = 2
+	style.border_width_top = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(1.0, 0.8, 0.2)
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
+	_banner_panel.add_theme_stylebox_override("panel", style)
+	_banner_panel.modulate.a = 0.0
+	add_child(_banner_panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	_banner_panel.add_child(vbox)
+
+	_banner_title = Label.new()
+	_banner_title.text = "VAZIFA BAJARILDI!"
+	_banner_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_title.add_theme_font_size_override("font_size", 20)
+	_banner_title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
+	vbox.add_child(_banner_title)
+
+	_banner_sub = Label.new()
+	_banner_sub.text = "Qultoy Cho'pon sadosi"
+	_banner_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_sub.add_theme_font_size_override("font_size", 15)
+	_banner_sub.add_theme_color_override("font_color", Color(0.9, 0.9, 0.85))
+	vbox.add_child(_banner_sub)
+
+
+func show_banner(title: String, subtitle: String) -> void:
+	_banner_title.text = title
+	_banner_sub.text = subtitle
+	if _banner_tween and _banner_tween.is_valid():
+		_banner_tween.kill()
+	_banner_tween = create_tween()
+	_banner_tween.tween_property(_banner_panel, "modulate:a", 1.0, 0.3)
+	_banner_tween.tween_interval(2.5)
+	_banner_tween.tween_property(_banner_panel, "modulate:a", 0.0, 0.5)
+
+
+func _connect_quests() -> void:
+	var qsystem = get_tree().get_first_node_in_group("quest_system")
+	if qsystem == null:
+		return
+	if qsystem.has_signal("quest_updated"):
+		qsystem.connect("quest_updated", func(_id: String, title: String, text: String, _comp: bool):
+			_quest_title_label.text = title
+			_quest_desc_label.text = text)
+	if qsystem.has_signal("banner_requested"):
+		qsystem.connect("banner_requested", show_banner)
+
+	if qsystem.has_method("get_active_quest"):
+		var q: Dictionary = qsystem.get_active_quest()
+		if not q.is_empty():
+			_quest_title_label.text = q.get("title", "")
+			_quest_desc_label.text = q.get("desc", "")

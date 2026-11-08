@@ -7,6 +7,10 @@ const BossSurxayilScript = preload("res://scripts/enemies/boss_surxayil.gd")
 const EnemyScript = preload("res://scripts/enemies/enemy.gd")
 const DummyScript = preload("res://scripts/world/dummy.gd")
 const TrapScript = preload("res://scripts/world/trap.gd")
+const YurtScript = preload("res://scripts/world/yurt.gd")
+const NPCScript = preload("res://scripts/world/npc.gd")
+const DialogBoxScript = preload("res://scripts/story/dialog_box.gd")
+const QuestSystemScript = preload("res://scripts/story/quest_system.gd")
 
 var _boss: CharacterBody3D
 var _arena_gate: StaticBody3D
@@ -21,6 +25,14 @@ var _giant_spawn := Vector3(38, 0, 48)
 
 func _ready() -> void:
 	_build_environment()
+
+	# Kvest va Dialog tizimi
+	var qsystem = QuestSystemScript.new()
+	add_child(qsystem)
+
+	var dbox = DialogBoxScript.new()
+	dbox.add_to_group("dialog_box")
+	add_child(dbox)
 
 	# Yagona yaxlit ulkan Boysun dashti zamini (Z-fighting mutlaqo yo'q)
 	_box(Vector3(20, -1.0, 10), Vector3(320, 2.0, 320), Color(0.42, 0.45, 0.28))
@@ -54,9 +66,12 @@ func _ready() -> void:
 	trap.position = Vector3(5, 0.15, 8)
 	add_child(trap)
 
-	# Boychibor tulpori (o'yinchi yonida o'tlab turadi)
+	# Boysun elining o'tovlari va Qultoy Cho'pon manzilgohi
+	_build_yurt_village()
+
+	# Boychibor tulpori (o'yinchi va o'tov yonida o'tlab turadi)
 	_horse = HorseScript.new()
-	_horse.position = Vector3(4.5, 0.1, 3.5)
+	_horse.position = Vector3(6.0, 0.1, 4.0)
 	add_child(_horse)
 
 	# Katta Boysun Dashti (Janub va Sharq tomonda)
@@ -67,6 +82,53 @@ func _ready() -> void:
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
+
+
+func _build_yurt_village() -> void:
+	# 1. Asosiy katta o'tov
+	var main_yurt = YurtScript.new()
+	main_yurt.position = Vector3(18, 0, 16)
+	add_child(main_yurt)
+
+	# Qultoy Cho'pon (Alpomishning sodiq do'sti va oqsoqol)
+	var qultoy = NPCScript.new()
+	qultoy.character_type = NPCScript.CharacterType.QULTOY
+	qultoy.character_name = "Qultoy Cho'pon"
+	qultoy.position = Vector3(18, 0, 21.2)
+	qultoy.rotation_degrees.y = 180.0
+	add_child(qultoy)
+
+	# 2. Qo'shni o'tov
+	var side_yurt = YurtScript.new()
+	side_yurt.position = Vector3(32, 0, 18)
+	side_yurt.scale = Vector3(0.85, 0.85, 0.85)
+	add_child(side_yurt)
+
+	# 3. Qo'ng'irot tug'i (Ko'k bayroq)
+	var pole := StaticBody3D.new()
+	pole.position = Vector3(13, 0, 14)
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.05
+	cyl.bottom_radius = 0.06
+	cyl.height = 4.5
+	var pmat := StandardMaterial3D.new()
+	pmat.albedo_color = Color(0.3, 0.2, 0.1)
+	cyl.material = pmat
+	var pmi := MeshInstance3D.new()
+	pmi.mesh = cyl
+	pmi.position.y = 2.25
+	pole.add_child(pmi)
+
+	var flag := MeshInstance3D.new()
+	var fbox := BoxMesh.new()
+	fbox.size = Vector3(0.04, 0.8, 1.3)
+	var fmat := StandardMaterial3D.new()
+	fmat.albedo_color = Color(0.15, 0.35, 0.75) # Ko'k bayroq
+	flag.mesh = fbox
+	flag.material_override = fmat
+	flag.position = Vector3(0, 3.8, 0.65)
+	pole.add_child(flag)
+	add_child(pole)
 
 
 func _build_steppe() -> void:
