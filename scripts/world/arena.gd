@@ -15,6 +15,7 @@ const ProgressionScript = preload("res://scripts/player/progression.gd")
 const PauseMenuScript = preload("res://scripts/ui/pause_menu.gd")
 const DungeonGateScript = preload("res://scripts/world/dungeon_gate.gd")
 const DungeonAreaScript = preload("res://scripts/world/dungeon_area.gd")
+const DayNightCycleScript = preload("res://scripts/world/day_night_cycle.gd")
 const MainMenuScript = preload("res://scripts/ui/main_menu.gd")
 
 var _boss: CharacterBody3D
@@ -406,31 +407,52 @@ func _pillar(pos: Vector3) -> void:
 
 func _build_environment() -> void:
 	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.25, 0.4, 0.65)
-	sky_mat.sky_horizon_color = Color(0.85, 0.7, 0.5)
-	sky_mat.ground_horizon_color = Color(0.85, 0.7, 0.5)
+	sky_mat.sky_top_color = Color(0.2, 0.45, 0.75)
+	sky_mat.sky_horizon_color = Color(0.85, 0.75, 0.6)
+	sky_mat.ground_horizon_color = sky_mat.sky_horizon_color
+	sky_mat.sun_angle_max = 30.0
+
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
+
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_energy = 0.75
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_exposure = 1.05
+
+	# Realistik tuman (Volumetric-like atmosferik fog)
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.85, 0.72, 0.55)
-	env.fog_density = 0.003
+	env.fog_light_color = Color(0.82, 0.76, 0.68)
+	env.fog_density = 0.0025
+	env.fog_aerial_perspective = 0.5
+
+	# Zamonaviy post-processing: SSAO, Glow va rang jozibadorligi
 	env.ssao_enabled = true
+	env.ssao_radius = 1.5
+	env.ssao_intensity = 2.0
 	env.glow_enabled = true
+	env.glow_intensity = 0.6
+	env.glow_bloom = 0.15
+
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, -35, 0)
-	sun.light_color = Color(1.0, 0.92, 0.8)
+	sun.light_color = Color(1.0, 0.94, 0.84)
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 120.0
+	sun.directional_shadow_max_distance = 140.0
+	sun.directional_shadow_blend_splits = true
 	add_child(sun)
+
+	# 12-bosqich: Dinamik Kun/Tun aylanishini boshlash
+	var cycle := DayNightCycleScript.new()
+	add_child(cycle)
+	cycle.setup(sun, env, sky_mat)
 
 
 func _box(pos: Vector3, size: Vector3, color: Color) -> StaticBody3D:
