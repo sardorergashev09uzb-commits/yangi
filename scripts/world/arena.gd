@@ -266,6 +266,11 @@ func _build_boss_arena() -> void:
 	var arena_center := Vector3(0, 0, -82)
 	# Arena tosh poydevori
 	_box(arena_center + Vector3(0, 0.05, 0), Vector3(46, 0.3, 46), Color(0.32, 0.3, 0.35))
+	# Kirish va chiqishdagi silliq pandus / nishabliklar (Ot va aravada to'siqsiz kirish uchun)
+	var ramp_south := _box(arena_center + Vector3(0, 0.07, 24.2), Vector3(14, 0.15, 2.8), Color(0.35, 0.33, 0.38))
+	ramp_south.rotation_degrees.x = -3.5
+	var ramp_north := _box(arena_center + Vector3(0, 0.12, -23.5), Vector3(14, 0.15, 2.5), Color(0.30, 0.28, 0.32))
+	ramp_north.rotation_degrees.x = 3.5
 
 	# Atrof tosh devorlari
 	# Shimoliy devor: Zindon Darvozasiga o'tish yo'li (12 metr kenglikdagi mustahkam arkada)

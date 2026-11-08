@@ -164,6 +164,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		_process_idle(delta)
 
+	# Pog'onalar va tosh yo'laklardan sakramasdan silliq oshib o'tish (Step-up assist)
+	_apply_step_up(delta)
+
 	move_and_slide()
 	_animate_legs(delta)
 
@@ -238,6 +241,31 @@ func _process_mounted(delta: float) -> void:
 			_gallop_dust_timer = 0.16
 			FX.dust(global_position - global_basis.z * 0.9, 4, 0.75)
 			Audio.play_horse_step()
+
+
+func _apply_step_up(delta: float, max_step_height := 0.65) -> void:
+	if not is_on_floor():
+		return
+	var horiz := Vector3(velocity.x, 0.0, velocity.z)
+	if horiz.length_squared() < 0.01:
+		return
+
+	var move_step := horiz * delta
+	var col_fwd := KinematicCollision3D.new()
+	if test_move(global_transform, move_step, col_fwd):
+		var wall_norm := col_fwd.get_normal()
+		if wall_norm.y < 0.5:
+			var up_vec := Vector3(0.0, max_step_height, 0.0)
+			if not test_move(global_transform, up_vec):
+				var up_xform := global_transform.translated(up_vec)
+				if not test_move(up_xform, move_step):
+					var col_down := KinematicCollision3D.new()
+					if test_move(up_xform.translated(move_step), -up_vec, col_down):
+						if col_down.get_normal().y >= 0.5:
+							var step_up := max_step_height - col_down.get_travel().length()
+							if step_up > 0.005 and step_up <= max_step_height:
+								global_position.y += step_up
+								apply_floor_snap()
 
 
 func _check_trample() -> void:

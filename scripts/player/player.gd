@@ -103,6 +103,14 @@ func _ready() -> void:
 	collision_mask = 1 | (1 << 2)
 	hitbox.collision_layer = 1 << 3
 	hitbox.collision_mask = 1 << 2
+
+	# Pog'onalar, tosh yo'laklar va qiyaliklardan sakramasdan silliq oshib o'tish
+	floor_snap_length = 0.5
+	floor_constant_speed = true
+	floor_max_angle = deg_to_rad(55.0)
+	floor_stop_on_slope = false
+	max_slides = 6
+
 	_build_bow_visuals()
 
 
@@ -157,6 +165,10 @@ func _physics_process(delta: float) -> void:
 			velocity.x = 0.0
 			velocity.z = 0.0
 			velocity.y -= gravity * delta
+
+	# Pog'ona va notekis tosh yo'laklardan sakramasdan chiqish (Step-up assist)
+	_apply_step_up(delta)
+
 	move_and_slide()
 	_regen(delta)
 
@@ -165,6 +177,32 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < -3.0 and state != State.DEAD:
 		global_position = _spawn + Vector3.UP * 0.5
 		velocity = Vector3.ZERO
+
+
+## Pog'onalar, tosh yo'laklar va qiyaliklardan sakramasdan silliq oshib o'tish (Step-up assist)
+func _apply_step_up(delta: float, max_step_height := 0.45) -> void:
+	if not is_on_floor():
+		return
+	var horiz := Vector3(velocity.x, 0.0, velocity.z)
+	if horiz.length_squared() < 0.01:
+		return
+
+	var move_step := horiz * delta
+	var col_fwd := KinematicCollision3D.new()
+	if test_move(global_transform, move_step, col_fwd):
+		var wall_norm := col_fwd.get_normal()
+		if wall_norm.y < 0.5: # Tik devor yoki pog'ona yuzi
+			var up_vec := Vector3(0.0, max_step_height, 0.0)
+			if not test_move(global_transform, up_vec):
+				var up_xform := global_transform.translated(up_vec)
+				if not test_move(up_xform, move_step):
+					var col_down := KinematicCollision3D.new()
+					if test_move(up_xform.translated(move_step), -up_vec, col_down):
+						if col_down.get_normal().y >= 0.5:
+							var step_up := max_step_height - col_down.get_travel().length()
+							if step_up > 0.005 and step_up <= max_step_height:
+								global_position.y += step_up
+								apply_floor_snap()
 
 
 # ---------------------------------------------------------------- Oddiy holat
