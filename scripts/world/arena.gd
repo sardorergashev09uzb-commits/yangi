@@ -13,6 +13,7 @@ const DialogBoxScript = preload("res://scripts/story/dialog_box.gd")
 const QuestSystemScript = preload("res://scripts/story/quest_system.gd")
 const ProgressionScript = preload("res://scripts/player/progression.gd")
 const PauseMenuScript = preload("res://scripts/ui/pause_menu.gd")
+const MainMenuScript = preload("res://scripts/ui/main_menu.gd")
 
 var _boss: CharacterBody3D
 var _arena_gate: StaticBody3D
@@ -93,6 +94,10 @@ func _ready() -> void:
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
+
+	# Bosh menyu (headless sinovlarda o'tkazib yuboriladi)
+	if DisplayServer.get_name() != "headless":
+		add_child(MainMenuScript.new())
 
 
 func _build_yurt_village() -> void:

@@ -260,6 +260,9 @@ func _build_settings_tab() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	var mm := get_tree().get_first_node_in_group("main_menu")
+	if mm and mm.visible:
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_TAB or event.keycode == KEY_K:
 			get_viewport().set_input_as_handled()
