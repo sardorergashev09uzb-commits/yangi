@@ -58,7 +58,7 @@ var _label: Label3D
 
 func _ready() -> void:
 	_stats = STATS[kind]
-	max_health = _stats.hp
+	max_health = _stats.hp * GameSettings.get_mult("enemy_hp")
 	health = max_health
 	_strafe_sign = 1.0 if randf() < 0.5 else -1.0
 	add_to_group("enemies")
@@ -367,7 +367,7 @@ func _melee_hit() -> void:
 	if forward.angle_to(to) > deg_to_rad(60.0):
 		return
 	_struck = true
-	_player.take_damage(_stats.damage, global_position, 6.0)
+	_player.take_damage(_stats.damage * GameSettings.get_mult("enemy_dmg"), global_position, 6.0)
 
 
 func _fire_arrow() -> void:
@@ -375,7 +375,7 @@ func _fire_arrow() -> void:
 	var target := _player.global_position + Vector3.UP * 1.0
 	var arrow := Arrow.new()
 	arrow.shooter = self
-	arrow.damage = _stats.damage
+	arrow.damage = _stats.damage * GameSettings.get_mult("enemy_dmg")
 	arrow.gravity = 2.0
 	arrow.hit_mask = 1 | (1 << 1)
 	arrow.velocity = (target - origin).normalized() * 24.0

@@ -255,7 +255,7 @@ func _fire_bow(charge: float) -> void:
 	if is_mounted and mounted_horse and is_instance_valid(mounted_horse):
 		arrow.extra_exclude = [mounted_horse.get_rid()]
 
-	var base_dmg := lerpf(18.0, 48.0, charge)
+	var base_dmg := lerpf(18.0, 48.0, charge) * GameSettings.get_mult("player_dmg")
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("bow_mastery", false):
 		base_dmg *= 1.4
@@ -443,7 +443,7 @@ func _attack_tick(delta: float) -> void:
 
 
 func _check_hits() -> void:
-	var dmg: float = _attack.damage
+	var dmg: float = _attack.damage * GameSettings.get_mult("player_dmg")
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("sword_mastery", false):
 		dmg *= 1.35

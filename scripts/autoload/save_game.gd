@@ -42,7 +42,7 @@ func has_save() -> bool:
 
 
 func collect_state() -> Dictionary:
-	var data := {"version": VERSION}
+	var data := {"version": VERSION, "difficulty": GameSettings.difficulty}
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog:
 		data["progression"] = {
@@ -87,6 +87,8 @@ func load_game() -> bool:
 
 
 func apply_state(data: Dictionary) -> void:
+	if data.has("difficulty"):
+		GameSettings.difficulty = int(data["difficulty"])
 	var player = get_tree().get_first_node_in_group("player")
 	var prog = get_tree().get_first_node_in_group("progression")
 	var qs = get_tree().get_first_node_in_group("quest_system")

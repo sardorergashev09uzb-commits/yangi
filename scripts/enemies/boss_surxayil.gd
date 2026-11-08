@@ -44,6 +44,7 @@ var _weapon_mat: StandardMaterial3D
 
 
 func _ready() -> void:
+	max_health *= GameSettings.get_mult("enemy_hp")
 	health = max_health
 	add_to_group("enemies")
 	add_to_group("bosses")
@@ -235,7 +236,7 @@ func _tick_slam(dir: Vector3, delta: float) -> void:
 		var to_p := _player.global_position - (global_position + -global_basis.z * 2.2)
 		to_p.y = 0.0
 		if to_p.length() < 2.5:
-			_player.take_damage(20.0 if phase == 1 else 28.0, global_position, 10.0)
+			_player.take_damage((20.0 if phase == 1 else 28.0) * GameSettings.get_mult("enemy_dmg"), global_position, 10.0)
 	elif _timer >= windup + 0.3:
 		_start_recover(0.8 if phase == 1 else 0.5)
 
@@ -289,7 +290,7 @@ func _check_sweep_hit() -> void:
 		var forward := -global_basis.z
 		if forward.angle_to(to_p) < deg_to_rad(100.0):
 			_struck = true
-			_player.take_damage(16.0 if phase == 1 else 22.0, global_position, 8.0)
+			_player.take_damage((16.0 if phase == 1 else 22.0) * GameSettings.get_mult("enemy_dmg"), global_position, 8.0)
 			FX.hit_stop(0.06)
 
 
@@ -325,7 +326,7 @@ func _tick_whirlwind(dir: Vector3, delta: float) -> void:
 		var to_p := _player.global_position - global_position
 		to_p.y = 0.0
 		if to_p.length() <= 4.5:
-			_player.take_damage(12.0, global_position, 8.0)
+			_player.take_damage(12.0 * GameSettings.get_mult("enemy_dmg"), global_position, 8.0)
 			FX.hit_stop(0.05)
 
 	if _spin_count >= 4 or _timer >= 1.6:

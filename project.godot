@@ -10,6 +10,7 @@ config/features=PackedStringArray("4.3", "Forward Plus")
 
 [autoload]
 
+GameSettings="*res://scripts/autoload/game_settings.gd"
 InputSetup="*res://scripts/autoload/input_setup.gd"
 FX="*res://scripts/autoload/fx.gd"
 Audio="*res://scripts/autoload/audio_manager.gd"

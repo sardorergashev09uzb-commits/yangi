@@ -6,6 +6,7 @@ extends CanvasLayer
 signal game_started(from_save: bool)
 
 var _continue_btn: Button
+var _diff_btn: Button
 var _info: Label
 
 
@@ -90,6 +91,10 @@ func _build_ui() -> void:
 	_continue_btn.pressed.connect(continue_game)
 	box.add_child(_continue_btn)
 
+	_diff_btn = _button("Qiyinlik: " + GameSettings.get_difficulty_name())
+	_diff_btn.pressed.connect(_on_cycle_difficulty)
+	box.add_child(_diff_btn)
+
 	var quit_btn := _button("Chiqish")
 	quit_btn.pressed.connect(func() -> void: get_tree().quit())
 	box.add_child(quit_btn)
@@ -110,3 +115,8 @@ func _button(text: String) -> Button:
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.add_theme_font_size_override("font_size", 22)
 	return b
+
+
+func _on_cycle_difficulty() -> void:
+	GameSettings.cycle_difficulty()
+	_diff_btn.text = "Qiyinlik: " + GameSettings.get_difficulty_name()
