@@ -182,6 +182,9 @@ func _tick_stomp(dir: Vector3, delta: float) -> void:
 		sw.speed = 8.0
 		get_tree().current_scene.add_child(sw)
 		sw.global_position = global_position + Vector3.UP * 0.1
+		FX.dust(global_position, 18, 2.0)
+		FX.sparks(global_position + Vector3(0, 0.2, 0), Vector3.UP, Color(0.9, 0.8, 0.4), 16)
+		FX.camera_shake(0.4)
 		_cooldown = 2.0
 		state = State.CHASE
 
@@ -199,6 +202,7 @@ func take_damage(amount: float, from_pos := Vector3.ZERO, knockback := 2.0) -> v
 	health = maxf(health - amount, 0.0)
 	_update_label()
 	FX.popup(global_position + Vector3.UP * 4.5, amount)
+	FX.sparks(global_position + Vector3.UP * 2.5, Vector3.UP, Color(1.0, 0.6, 0.2), 12)
 	_mat.emission_energy_multiplier = 2.0
 	create_tween().tween_property(_mat, "emission_energy_multiplier", 0.0, 0.2)
 	if health <= 0.0:
@@ -216,6 +220,8 @@ func _die() -> void:
 	remove_from_group("enemies")
 	remove_from_group("hurtable")
 	_label.visible = false
+	FX.dust(global_position, 22, 2.2)
+	FX.sparks(global_position + Vector3.UP * 1.5, Vector3.UP, Color(0.8, 0.7, 0.3), 18)
 	var qsystem = get_tree().get_first_node_in_group("quest_system")
 	if qsystem and qsystem.has_method("complete_quest"):
 		qsystem.complete_quest("giant")

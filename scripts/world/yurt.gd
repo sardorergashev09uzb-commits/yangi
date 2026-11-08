@@ -115,6 +115,28 @@ func _build_campfire() -> void:
 	_fire_light.shadow_enabled = true
 	add_child(_fire_light)
 
+	# Gulxan cho'g'i va uchqunlari (CPUParticles3D)
+	var embers := CPUParticles3D.new()
+	embers.position = fire_pos + Vector3(0, 0.25, 0)
+	embers.amount = 16
+	embers.lifetime = 1.4
+	embers.explosiveness = 0.05
+	var emesh := BoxMesh.new()
+	emesh.size = Vector3(0.04, 0.04, 0.04)
+	var emat := StandardMaterial3D.new()
+	emat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	emat.albedo_color = Color(1.0, 0.65, 0.15)
+	emesh.material = emat
+	embers.mesh = emesh
+	embers.direction = Vector3.UP
+	embers.spread = 25.0
+	embers.initial_velocity_min = 1.0
+	embers.initial_velocity_max = 2.2
+	embers.gravity = Vector3(0, 0.6, 0)
+	embers.scale_amount_min = 0.6
+	embers.scale_amount_max = 1.3
+	add_child(embers)
+
 
 func _process(delta: float) -> void:
 	if _fire_light:

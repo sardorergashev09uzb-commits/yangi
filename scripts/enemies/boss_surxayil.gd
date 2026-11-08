@@ -246,7 +246,11 @@ func _spawn_shockwave() -> void:
 	sw.speed = 9.0 if phase == 1 else 12.0
 	sw.max_radius = 11.0
 	get_tree().current_scene.add_child(sw)
-	sw.global_position = global_position + -global_basis.z * 1.5 + Vector3.UP * 0.1
+	var impact_pt := global_position + -global_basis.z * 1.5 + Vector3.UP * 0.1
+	sw.global_position = impact_pt
+	FX.dust(impact_pt, 20, 2.2)
+	FX.sparks(impact_pt, Vector3.UP, Color(1.0, 0.45, 0.15), 18)
+	FX.camera_shake(0.45)
 
 
 # ---------------------------------------------------------------- Hujum 2: SWEEP (Keng aylanma)
@@ -363,6 +367,7 @@ func take_damage(amount: float, from_pos := Vector3.ZERO, knockback := 2.0) -> v
 	health = maxf(health - amount, 0.0)
 	boss_health_changed.emit(health, max_health, phase)
 	FX.popup(global_position + Vector3.UP * 3.0, amount, Color(1.0, 0.3, 0.2))
+	FX.sparks(global_position + Vector3.UP * 2.2, Vector3.UP, Color(1.0, 0.35, 0.15), 14)
 
 	# Zarba yeganda miltillash
 	_mat.emission_energy_multiplier = 2.0
@@ -386,6 +391,8 @@ func _die() -> void:
 	remove_from_group("hurtable")
 	_mat.emission_energy_multiplier = 0.0
 	_weapon_mat.emission_energy_multiplier = 0.0
+	FX.dust(global_position, 28, 2.5)
+	FX.sparks(global_position + Vector3.UP * 1.5, Vector3.UP, Color(1.0, 0.8, 0.2), 24)
 	boss_defeated.emit()
 	var qsystem = get_tree().get_first_node_in_group("quest_system")
 	if qsystem and qsystem.has_method("complete_quest"):

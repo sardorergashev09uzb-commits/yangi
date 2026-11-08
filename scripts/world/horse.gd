@@ -26,6 +26,7 @@ var _legs: Array[Node3D] = []
 var _anim_time := 0.0
 var _mount_cooldown := 0.0
 var _trample_cooldown := 0.0
+var _gallop_dust_timer := 0.0
 
 
 func _ready() -> void:
@@ -201,21 +202,28 @@ func _process_mounted(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= gravity * delta
 
-	# Ot chopganda dushmanlarni urib yiqitish (Trample)
+	# Ot chopganda dushmanlarni urib yiqitish (Trample) va chang chiqarish
 	if _trample_cooldown > 0.0:
 		_trample_cooldown -= delta
 	elif galloping:
 		_check_trample()
+
+	if galloping and moving and is_on_floor():
+		_gallop_dust_timer -= delta
+		if _gallop_dust_timer <= 0.0:
+			_gallop_dust_timer = 0.16
+			FX.dust(global_position - global_basis.z * 0.9, 4, 0.75)
 
 
 func _check_trample() -> void:
 	for e in get_tree().get_nodes_in_group("enemies"):
 		if e and is_instance_valid(e) and e.has_method("take_damage"):
 			if global_position.distance_to(e.global_position) < 2.5:
-				var hit_dir := -global_basis.z
 				e.take_damage(22.0, global_position, 8.0)
 				FX.hit_stop(0.04)
 				FX.camera_shake(0.35)
+				FX.sparks(e.global_position + Vector3(0, 1.0, 0), Vector3.UP, Color(1.0, 0.75, 0.2), 12)
+				FX.dust(global_position, 8, 1.1)
 				_trample_cooldown = 0.35
 				return
 

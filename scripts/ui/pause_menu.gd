@@ -1,16 +1,20 @@
 class_name PauseMenu
 extends CanvasLayer
-## Alpomish dostoni: Pauza, Ko'nikmalar daraxti (Skills) va Sozlamalar menyusi.
+## Alpomish dostoni: Pauza, Doston Vazifalari Jurnali, Ko'nikmalar daraxti (Skills) va Sozlamalar menyusi.
 
 var _panel: Panel
 var _tab_container: TabContainer
 
-# 1-tab: Ko'nikmalar
+# 1-tab: Doston Vazifalari
+var _quests_list: VBoxContainer
+var _quests_summary_lbl: Label
+
+# 2-tab: Ko'nikmalar
 var _sp_label: Label
 var _skills_list: VBoxContainer
 var _skill_buttons: Dictionary = {}
 
-# 2-tab: Sozlamalar
+# 3-tab: Sozlamalar
 var _sens_slider: HSlider
 var _sens_val_label: Label
 var _fov_slider: HSlider
@@ -36,10 +40,10 @@ func _build_ui() -> void:
 
 	_panel = Panel.new()
 	_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_panel.offset_left = -380
-	_panel.offset_right = 380
-	_panel.offset_top = -260
-	_panel.offset_bottom = 260
+	_panel.offset_left = -390
+	_panel.offset_right = 390
+	_panel.offset_top = -270
+	_panel.offset_bottom = 270
 
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.1, 0.08, 0.07, 0.95)
@@ -79,6 +83,7 @@ func _build_ui() -> void:
 	_tab_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	main_vbox.add_child(_tab_container)
 
+	_build_quests_tab()
 	_build_skills_tab()
 	_build_settings_tab()
 
@@ -101,9 +106,32 @@ func _build_ui() -> void:
 	btn_box.add_child(restart_btn)
 
 
+func _build_quests_tab() -> void:
+	var tab := VBoxContainer.new()
+	tab.name = "Doston Vazifalari"
+	tab.add_theme_constant_override("separation", 10)
+	_tab_container.add_child(tab)
+
+	_quests_summary_lbl = Label.new()
+	_quests_summary_lbl.text = "Bajarilgan vazifalar: 0 / 4"
+	_quests_summary_lbl.add_theme_font_size_override("font_size", 16)
+	_quests_summary_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	tab.add_child(_quests_summary_lbl)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tab.add_child(scroll)
+
+	_quests_list = VBoxContainer.new()
+	_quests_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_quests_list.add_theme_constant_override("separation", 10)
+	scroll.add_child(_quests_list)
+
+
 func _build_skills_tab() -> void:
 	var tab := VBoxContainer.new()
 	tab.name = "Alp Ko'nikmalari"
+	tab.add_theme_constant_override("separation", 10)
 	_tab_container.add_child(tab)
 
 	_sp_label = Label.new()
@@ -162,7 +190,7 @@ func _build_settings_tab() -> void:
 	fov_row.add_child(flabel)
 
 	_fov_slider = HSlider.new()
-	_fov_slider.min_value = 60.0
+	_fov_slider.min_value = 55.0
 	_fov_slider.max_value = 95.0
 	_fov_slider.step = 1.0
 	_fov_slider.value = 70.0
@@ -175,7 +203,7 @@ func _build_settings_tab() -> void:
 	fov_row.add_child(_fov_val_label)
 
 	var info := Label.new()
-	info.text = "Qisqa tugmalar:\n[ TAB / K ] – Ko'nikmalar menyusini ochish/yopish\n[ E ] – Suhbatlashish | [ F ] – Boychiborga minish\n[ T ] – Joyida tezkor qayta boshlash"
+	info.text = "Qisqa tugmalar:\n[ TAB / K ] – Doston jurnali va Ko'nikmalar\n[ E ] – Suhbatlashish | [ F ] – Boychiborga minish\n[ T ] – Joyida tezkor qayta boshlash"
 	info.add_theme_font_size_override("font_size", 14)
 	info.add_theme_color_override("font_color", Color(0.7, 0.7, 0.65))
 	tab.add_child(info)
@@ -198,19 +226,79 @@ func toggle_menu() -> void:
 
 	if is_menu_open:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		_refresh_quests()
 		_refresh_skills()
 	else:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
+func _refresh_quests() -> void:
+	var qsystem = get_tree().get_first_node_in_group("quest_system")
+	if qsystem == null or _quests_list == null:
+		return
+
+	for child in _quests_list.get_children():
+		child.queue_free()
+
+	var quests: Array[Dictionary] = qsystem.get_all_quests()
+	var completed_count: int = qsystem.get_completed_count()
+	var total_count: int = qsystem.get_total_count()
+
+	_quests_summary_lbl.text = "Doston Shartlari: %d / %d bajarildi (Ixtiyoriy ketma-ketlikda bajarish mumkin)" % [completed_count, total_count]
+	if completed_count == total_count:
+		_quests_summary_lbl.add_theme_color_override("font_color", Color(0.3, 0.95, 0.4))
+	else:
+		_quests_summary_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+
+	for q in quests:
+		var is_comp: bool = q.get("completed", false)
+		var item_panel := PanelContainer.new()
+		var pstyle := StyleBoxFlat.new()
+		pstyle.bg_color = Color(0.12, 0.18, 0.12) if is_comp else Color(0.14, 0.12, 0.10)
+		pstyle.border_width_left = 3
+		pstyle.border_color = Color(0.3, 0.9, 0.4) if is_comp else Color(0.8, 0.65, 0.25)
+		pstyle.content_margin_left = 12
+		pstyle.content_margin_right = 12
+		pstyle.content_margin_top = 8
+		pstyle.content_margin_bottom = 8
+		item_panel.add_theme_stylebox_override("panel", pstyle)
+		_quests_list.add_child(item_panel)
+
+		var row := HBoxContainer.new()
+		item_panel.add_child(row)
+
+		var text_vbox := VBoxContainer.new()
+		text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(text_vbox)
+
+		var name_lbl := Label.new()
+		name_lbl.text = q.get("title", "")
+		name_lbl.add_theme_font_size_override("font_size", 16)
+		name_lbl.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5) if is_comp else Color(1.0, 0.9, 0.5))
+		text_vbox.add_child(name_lbl)
+
+		var desc_lbl := Label.new()
+		desc_lbl.text = q.get("desc", "")
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		desc_lbl.add_theme_font_size_override("font_size", 13)
+		desc_lbl.add_theme_color_override("font_color", Color(0.85, 0.82, 0.78))
+		text_vbox.add_child(desc_lbl)
+
+		var status_badge := Label.new()
+		status_badge.text = "[ BAJARILDI ]\n+%d XP" % q.get("xp", 50) if is_comp else "[ KUTILMOQDA ]\n+%d XP" % q.get("xp", 50)
+		status_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		status_badge.add_theme_font_size_override("font_size", 13)
+		status_badge.add_theme_color_override("font_color", Color(0.3, 0.95, 0.4) if is_comp else Color(1.0, 0.78, 0.25))
+		row.add_child(status_badge)
+
+
 func _refresh_skills() -> void:
 	var prog: Progression = get_tree().get_first_node_in_group("progression") as Progression
-	if prog == null:
+	if prog == null or _skills_list == null:
 		return
 
 	_sp_label.text = "Daraja (Level): %d | Mavjud ko'nikma ochkolari: %d" % [prog.level, prog.skill_points]
 
-	# Ro'yxatni tozalab qayta chizish
 	for child in _skills_list.get_children():
 		child.queue_free()
 
@@ -221,8 +309,12 @@ func _refresh_skills() -> void:
 		var item_panel := PanelContainer.new()
 		var pstyle := StyleBoxFlat.new()
 		pstyle.bg_color = Color(0.14, 0.12, 0.10) if not is_unlocked else Color(0.12, 0.20, 0.12)
-		pstyle.border_width_left = 2
+		pstyle.border_width_left = 3
 		pstyle.border_color = Color(0.4, 0.8, 0.3) if is_unlocked else Color(0.6, 0.5, 0.3)
+		pstyle.content_margin_left = 12
+		pstyle.content_margin_right = 12
+		pstyle.content_margin_top = 8
+		pstyle.content_margin_bottom = 8
 		item_panel.add_theme_stylebox_override("panel", pstyle)
 		_skills_list.add_child(item_panel)
 

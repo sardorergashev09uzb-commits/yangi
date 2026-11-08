@@ -1,72 +1,113 @@
+class_name QuestSystem
 extends Node
-## Alpomish dostoni: Kvestlar va vazifalar boshqaruvchisi.
+## Alpomish dostoni: Erkin (non-linear) kvest tizimi va vazifalar jurnali.
 
-signal quest_updated(id: String, title: String, text: String, completed: bool)
+signal quest_state_changed(id: String, completed: bool)
 signal banner_requested(title: String, subtitle: String)
-
-enum QuestStatus { NOT_STARTED, ACTIVE, COMPLETED }
+signal all_quests_completed()
 
 var quests: Dictionary = {
 	"qultoy": {
-		"title": "1. Qultoy Cho'pon sadosi",
-		"desc": "Boysun o'toviga boring va Qultoy oqsoqol bilan gaplashing [ E ]",
-		"status": QuestStatus.ACTIVE
+		"id": "qultoy",
+		"title": "Qultoy Cho'pon sadosi",
+		"desc": "Boysun o'toviga borib Qultoy oqsoqol bilan suhbatlashish [ E ]",
+		"hint": "O'tovda suhbatlashish [ E ]",
+		"completed": false,
+		"xp": 50
 	},
 	"boychibor": {
-		"title": "2. Boychibor tulpori",
-		"desc": "Afsonaviy Boychiborga mining [ F ] va dasht bo'ylab tezlashing",
-		"status": QuestStatus.NOT_STARTED
+		"id": "boychibor",
+		"title": "Boychibor tulpori",
+		"desc": "Boychiborga minib [ F ], dasht bo'ylab chopish va sakrash",
+		"hint": "Otga minish va chopish [ F ]",
+		"completed": false,
+		"xp": 60
 	},
 	"giant": {
-		"title": "3. Qoyali Dasht Devi",
-		"desc": "Sharqdagi Qoyali Dasht Devini mag'lub eting",
-		"status": QuestStatus.NOT_STARTED
+		"id": "giant",
+		"title": "Qoyali Dasht Devi",
+		"desc": "Sharqdagi bahaybat Dasht Devini yengish",
+		"hint": "Sharqdagi bahaybat devni yengish",
+		"completed": false,
+		"xp": 100
 	},
 	"boss": {
-		"title": "4. Surxayil Alp arenasi",
-		"desc": "Shimoliy darvozadan o'tib, Qalmoq pahlavoni Surxayilni tiz cho'ktiring",
-		"status": QuestStatus.NOT_STARTED
+		"id": "boss",
+		"title": "Surxayil Alp arenasi",
+		"desc": "Shimoliy arenaga kirib, Qalmoq pahlavoni Surxayilni mag'lub etish",
+		"hint": "Shimoliy arenadagi botirni yengish",
+		"completed": false,
+		"xp": 150
 	}
 }
-
-var current_quest_id := "qultoy"
 
 
 func _ready() -> void:
 	add_to_group("quest_system")
 
 
+func get_all_quests() -> Array[Dictionary]:
+	var list: Array[Dictionary] = []
+	for qid in ["qultoy", "boychibor", "giant", "boss"]:
+		if quests.has(qid):
+			list.append(quests[qid])
+	return list
+
+
 func get_active_quest() -> Dictionary:
-	if quests.has(current_quest_id):
-		return quests[current_quest_id]
+	# Bajarilmagan birinchi vazifa (eski interfeyslar mosligi uchun)
+	for qid in ["qultoy", "boychibor", "giant", "boss"]:
+		if quests.has(qid) and not quests[qid].completed:
+			return quests[qid]
 	return {}
+
+
+func get_completed_count() -> int:
+	var count := 0
+	for q in quests.values():
+		if q.get("completed", false):
+			count += 1
+	return count
+
+
+func get_total_count() -> int:
+	return quests.size()
+
+
+func is_quest_completed(id: String) -> bool:
+	if quests.has(id):
+		return quests[id].completed
+	return false
 
 
 func complete_quest(id: String) -> void:
 	if not quests.has(id):
 		return
 	var q: Dictionary = quests[id]
-	if q.status == QuestStatus.COMPLETED:
-		return
-	q.status = QuestStatus.COMPLETED
-	quest_updated.emit(id, q.title, q.desc, true)
-	banner_requested.emit("VAZIFA BAJARILDI!", q.title)
+	if q.completed:
+		return # Allaqachon bajarilgan
 
-	# Keyingi kvestni faollashtirish
-	match id:
-		"qultoy":
-			_activate_quest("boychibor")
-		"boychibor":
-			_activate_quest("giant")
-		"giant":
-			_activate_quest("boss")
-		"boss":
-			banner_requested.emit("DOSTON QAHRAMONI!", "Barchinoy sari yo'l ochildi. Boysun eli ozod!")
+	q.completed = true
+	quest_state_changed.emit(id, true)
+	banner_requested.emit("VAZIFA BAJARILDI!", "%s (+%d XP)" % [q.title, q.get("xp", 50)])
+
+	# XP berish
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.has_method("add_xp"):
+		prog.add_xp(q.get("xp", 50))
+
+	# Barcha vazifalar bajarilganini tekshirish
+	_check_all_completed()
 
 
-func _activate_quest(id: String) -> void:
-	if quests.has(id):
-		quests[id].status = QuestStatus.ACTIVE
-		current_quest_id = id
-		quest_updated.emit(id, quests[id].title, quests[id].desc, false)
-		banner_requested.emit("YANGI VAZIFA!", quests[id].title)
+func _check_all_completed() -> void:
+	for qid in quests.keys():
+		if not quests[qid].completed:
+			return # Hali bajarilmagan vazifa bor
+
+	# Barcha 4 ta vazifa bajarildi!
+	all_quests_completed.emit()
+	banner_requested.emit(
+		"DOSTON QAHRAMONI!",
+		"Barcha shartlar bajarildi! Barchinoy ozod, Qo'ng'irot eli faxri!"
+	)

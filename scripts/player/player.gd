@@ -435,6 +435,7 @@ func _check_hits() -> void:
 		var knock := 9.0 if _attack_heavy else 5.0
 		b.take_damage(dmg, global_position, knock)
 		FX.hit_stop(0.12 if _attack_heavy else 0.07)
+		FX.sparks(b.global_position + Vector3(0, 1.0, 0), Vector3.UP, Color(1.0, 0.85, 0.25))
 		rig.shake(0.3 if _attack_heavy else 0.15)
 
 
@@ -470,6 +471,7 @@ func _start_dodge(dir: Vector3) -> void:
 	_dodge_timer = 0.0
 	state = State.DODGE
 	_dodge_invuln = true
+	FX.dust(global_position, 8, 0.9)
 
 
 func _dodge(delta: float) -> void:

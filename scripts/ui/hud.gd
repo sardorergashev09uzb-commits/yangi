@@ -1,5 +1,5 @@
 extends CanvasLayer
-## HUD: salomatlik, kuch, kamon zaryadi, dushmanlar soni, Boss paneli va qayta boshlash menyusi.
+## HUD: salomatlik, kuch, kamon zaryadi, dushmanlar soni, Boss paneli, Vazifalar jurnali (Checklist).
 
 var _health_bar: ProgressBar
 var _stamina_bar: ProgressBar
@@ -17,11 +17,13 @@ var _boss_phase_label: Label
 # O'lim va G'alaba ekranlari
 var _death_panel: Panel
 var _victory_panel: Panel
+var _victory_title: Label
+var _victory_sub: Label
 
-# Kvest va Banner UI
-var _quest_container: VBoxContainer
-var _quest_title_label: Label
-var _quest_desc_label: Label
+# Kvest Checklist UI
+var _quest_panel: PanelContainer
+var _quest_header: Label
+var _quest_items: Dictionary = {} # id -> {check: Label, title: Label, hint: Label}
 var _banner_panel: PanelContainer
 var _banner_title: Label
 var _banner_sub: Label
@@ -55,7 +57,7 @@ func _ready() -> void:
 
 	_enemy_label = Label.new()
 	_enemy_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_enemy_label.position = Vector2(-220, 28)
+	_enemy_label.position = Vector2(-360, 24)
 	add_child(_enemy_label)
 
 	_crosshair = Label.new()
@@ -78,9 +80,9 @@ func _ready() -> void:
 
 	var help := Label.new()
 	help.position = Vector2(30, 92)
-	help.text = "WASD - yurish | Sichqoncha - kamera | TAB - ko'nikmalar & pauza | E - suhbatlashish | F - Boychibor | H - hushtak\n" \
-			+ "Ot ustida Shift - shiddatli galop (16 m/s) va toptash (trample) | Space / X - sakrash | O'ng tugma - kamon otish\n" \
-			+ "Sharqqa: Boysun O'tovi, Qultoy Cho'pon va Dev | Shimolga: Surxayil Arenasi | T - qayta boshlash"
+	help.text = "WASD - yurish | Sichqoncha - kamera | TAB - doston & ko'nikmalar | E - suhbatlashish | F - Boychibor | H - hushtak\n" \
+			+ "Ot ustida Shift - shiddatli galop (16 m/s) va toptash | Space / X - sakrash | O'ng tugma - kamon otish\n" \
+			+ "Sharqda: O'tov, Qultoy Cho'pon va Dev | Shimolda: Surxayil Arenasi | T - qayta boshlash"
 	add_child(help)
 
 	_connect_player.call_deferred()
@@ -108,16 +110,16 @@ func _setup_game_over_ui() -> void:
 	_death_panel.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "ALPAMISH YIQILDI"
+	title.text = "MAG'LUB BO'LDINGIZ"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 54)
-	title.add_theme_color_override("font_color", Color(0.95, 0.15, 0.15))
+	title.add_theme_font_size_override("font_size", 44)
+	title.add_theme_color_override("font_color", Color(0.9, 0.15, 0.15))
 	vbox.add_child(title)
 
 	var sub := Label.new()
-	sub.text = "Qayta boshlash uchun [ SPACE ] yoki [ R ] bosing"
+	sub.text = "Alp Alpomish o'z elini asrashi shart!\n[ SPACE ] yoki [ R ] – Qayta urinish"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_font_size_override("font_size", 22)
+	sub.add_theme_font_size_override("font_size", 18)
 	sub.add_theme_color_override("font_color", Color(0.85, 0.8, 0.75))
 	vbox.add_child(sub)
 
@@ -126,55 +128,74 @@ func _setup_game_over_ui() -> void:
 	vbox.add_child(space)
 
 	var btn := Button.new()
-	btn.text = "Qayta boshlash (Restart)"
+	btn.text = "Qayta urinish (Tiriklanish)"
 	btn.custom_minimum_size = Vector2(260, 48)
 	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	btn.pressed.connect(_restart_scene)
+	btn.pressed.connect(_respawn_player)
 	vbox.add_child(btn)
+
+
+func _respawn_player() -> void:
+	_death_panel.visible = false
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if _player and _player.has_method("respawn"):
+		_player.respawn()
 
 
 func _setup_victory_ui() -> void:
 	_victory_panel = Panel.new()
 	_victory_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.02, 0.06, 0.03, 0.88)
+	style.bg_color = Color(0.03, 0.05, 0.02, 0.92)
 	_victory_panel.add_theme_stylebox_override("panel", style)
 	_victory_panel.visible = false
 	add_child(_victory_panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_CENTER)
-	vbox.offset_left = -300
-	vbox.offset_right = 300
-	vbox.offset_top = -130
-	vbox.offset_bottom = 130
+	vbox.offset_left = -320
+	vbox.offset_right = 320
+	vbox.offset_top = -140
+	vbox.offset_bottom = 140
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 14)
 	_victory_panel.add_child(vbox)
 
-	var title := Label.new()
-	title.text = "SURXAYIL ALP MAG'LUB ETILDI!"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 48)
-	title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
-	vbox.add_child(title)
+	_victory_title = Label.new()
+	_victory_title.text = "DOSTON QAHRAMONI - ALPOMISH!"
+	_victory_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_victory_title.add_theme_font_size_override("font_size", 38)
+	_victory_title.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	vbox.add_child(_victory_title)
 
-	var sub := Label.new()
-	sub.text = "Qalmoq botiri tiz cho'kdi. Qo'ng'irot sari yo'l ochildi!\n[ SPACE ] yoki [ R ] – Boss bilan qayta jang qilish"
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub.add_theme_font_size_override("font_size", 20)
-	sub.add_theme_color_override("font_color", Color(0.9, 0.9, 0.85))
-	vbox.add_child(sub)
+	_victory_sub = Label.new()
+	_victory_sub.text = "Barcha shartlar ado etildi! Qo'ng'irot eli ozod, Barchinoy omon!"
+	_victory_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_victory_sub.add_theme_font_size_override("font_size", 17)
+	_victory_sub.add_theme_color_override("font_color", Color(0.9, 0.9, 0.85))
+	vbox.add_child(_victory_sub)
 
-	var space := Control.new()
-	space.custom_minimum_size = Vector2(0, 16)
-	vbox.add_child(space)
+	var btn_box := HBoxContainer.new()
+	btn_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	btn_box.add_theme_constant_override("separation", 20)
+	vbox.add_child(btn_box)
 
-	var btn := Button.new()
-	btn.text = "Boss bilan qayta jang qilish"
-	btn.custom_minimum_size = Vector2(280, 48)
-	btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	btn.pressed.connect(_restart_scene)
-	vbox.add_child(btn)
+	var continue_btn := Button.new()
+	continue_btn.text = "Erkin sayrni davom ettirish"
+	continue_btn.custom_minimum_size = Vector2(230, 44)
+	continue_btn.pressed.connect(_on_continue_free_roam)
+	btn_box.add_child(continue_btn)
+
+	var restart_btn := Button.new()
+	restart_btn.text = "Dostonni qayta boshlash"
+	restart_btn.custom_minimum_size = Vector2(210, 44)
+	restart_btn.pressed.connect(_restart_scene)
+	btn_box.add_child(restart_btn)
+
+
+func _on_continue_free_roam() -> void:
+	_victory_panel.visible = false
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -182,9 +203,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_T:
 			_restart_scene()
 			return
-		if _death_panel.visible or _victory_panel.visible:
+		if _death_panel.visible:
 			if event.keycode == KEY_SPACE or event.keycode == KEY_R or event.keycode == KEY_ENTER:
-				_restart_scene()
+				_respawn_player()
+				return
+		if _victory_panel.visible:
+			if event.keycode == KEY_SPACE or event.keycode == KEY_ENTER:
+				_on_continue_free_roam()
+				return
 
 
 func _restart_scene() -> void:
@@ -305,7 +331,17 @@ func _on_boss_phase(phase: int) -> void:
 
 
 func _on_boss_defeated() -> void:
+	# Boss yengilganda o'yin majburan to'xtamaydi! O'yinchi bemalol dashtni kezishi mumkin.
 	_boss_container.visible = false
+	show_banner("SURXAYIL ALP YENGILDI!", "Qalmoq botiri tiz cho'kdi! Dasht sari yo'l ochiq!")
+
+
+func _on_all_quests_completed() -> void:
+	# Barcha 4 ta doston vazifasi to'liq bajarilganda ulug' g'alaba oynasi chiqadi
+	_victory_title.text = "DOSTON QAHRAMONI - ALPOMISH!"
+	_victory_sub.text = "Barcha 4 shart ado etildi: Qultoy oqsoqol duosi olindi, Boychibor jilovlandi,\n" \
+			+ "Qoyali Dasht Devi yengildi va Surxayil Alp tiz cho'ktirildi!\n" \
+			+ "Barchinoy ozod, Qo'ng'irot eli omon!"
 	_victory_panel.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -324,49 +360,136 @@ func _process(_delta: float) -> void:
 
 
 func _setup_quest_ui() -> void:
-	_quest_container = VBoxContainer.new()
-	_quest_container.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_quest_container.offset_left = -340
-	_quest_container.offset_right = -30
-	_quest_container.offset_top = 58
-	_quest_container.offset_bottom = 150
-	add_child(_quest_container)
+	# Erkin va qulay Doston Vazifalari Jadvali (Checklist)
+	_quest_panel = PanelContainer.new()
+	_quest_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_quest_panel.offset_left = -360
+	_quest_panel.offset_right = -20
+	_quest_panel.offset_top = 52
+	_quest_panel.offset_bottom = 230
 
-	var header := Label.new()
-	header.text = "DOSTON VAZIFASI"
-	header.add_theme_font_size_override("font_size", 13)
-	header.add_theme_color_override("font_color", Color(1.0, 0.75, 0.2))
-	_quest_container.add_child(header)
+	var pstyle := StyleBoxFlat.new()
+	pstyle.bg_color = Color(0.08, 0.07, 0.06, 0.85)
+	pstyle.border_width_left = 2
+	pstyle.border_width_right = 2
+	pstyle.border_width_top = 2
+	pstyle.border_width_bottom = 2
+	pstyle.border_color = Color(0.75, 0.62, 0.28, 0.8)
+	pstyle.corner_radius_top_left = 8
+	pstyle.corner_radius_top_right = 8
+	pstyle.corner_radius_bottom_left = 8
+	pstyle.corner_radius_bottom_right = 8
+	pstyle.content_margin_left = 12
+	pstyle.content_margin_right = 12
+	pstyle.content_margin_top = 10
+	pstyle.content_margin_bottom = 10
+	_quest_panel.add_theme_stylebox_override("panel", pstyle)
+	add_child(_quest_panel)
 
-	_quest_title_label = Label.new()
-	_quest_title_label.text = "1. Qultoy Cho'pon sadosi"
-	_quest_title_label.add_theme_font_size_override("font_size", 16)
-	_quest_title_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.85))
-	_quest_container.add_child(_quest_title_label)
+	var main_vbox := VBoxContainer.new()
+	main_vbox.add_theme_constant_override("separation", 6)
+	_quest_panel.add_child(main_vbox)
 
-	_quest_desc_label = Label.new()
-	_quest_desc_label.text = "Boysun o'toviga boring va Qultoy bilan gaplashing [ E ]"
-	_quest_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_quest_desc_label.add_theme_font_size_override("font_size", 13)
-	_quest_desc_label.add_theme_color_override("font_color", Color(0.85, 0.82, 0.75))
-	_quest_container.add_child(_quest_desc_label)
+	_quest_header = Label.new()
+	_quest_header.text = "DOSTON VAZIFALARI (0/4)"
+	_quest_header.add_theme_font_size_override("font_size", 14)
+	_quest_header.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	main_vbox.add_child(_quest_header)
+
+	var rows := [
+		{"id": "qultoy", "title": "Qultoy Cho'pon sadosi", "hint": "O'tovda suhbatlashish [ E ]"},
+		{"id": "boychibor", "title": "Boychibor tulpori", "hint": "Otga minish va chopish [ F ]"},
+		{"id": "giant", "title": "Qoyali Dasht Devi", "hint": "Sharqdagi devni yengish"},
+		{"id": "boss", "title": "Surxayil Alp arenasi", "hint": "Shimoliy arenadagi botirni yengish"}
+	]
+
+	for r in rows:
+		var row_hbox := HBoxContainer.new()
+		row_hbox.add_theme_constant_override("separation", 8)
+		main_vbox.add_child(row_hbox)
+
+		var chk := Label.new()
+		chk.text = "[○]"
+		chk.add_theme_font_size_override("font_size", 13)
+		chk.add_theme_color_override("font_color", Color(1.0, 0.78, 0.25))
+		row_hbox.add_child(chk)
+
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row_hbox.add_child(info)
+
+		var tlbl := Label.new()
+		tlbl.text = r.title
+		tlbl.add_theme_font_size_override("font_size", 13)
+		tlbl.add_theme_color_override("font_color", Color(0.95, 0.92, 0.85))
+		info.add_child(tlbl)
+
+		var hlbl := Label.new()
+		hlbl.text = r.hint
+		hlbl.add_theme_font_size_override("font_size", 11)
+		hlbl.add_theme_color_override("font_color", Color(0.72, 0.7, 0.65))
+		info.add_child(hlbl)
+
+		_quest_items[r.id] = {
+			"check": chk,
+			"title": tlbl,
+			"hint": hlbl
+		}
+
+
+func _refresh_quest_tracker() -> void:
+	var qsystem = get_tree().get_first_node_in_group("quest_system")
+	if qsystem == null:
+		return
+	var quests: Array[Dictionary] = qsystem.get_all_quests()
+	var completed_count: int = qsystem.get_completed_count()
+	var total_count: int = qsystem.get_total_count()
+
+	_quest_header.text = "DOSTON VAZIFALARI (%d/%d)" % [completed_count, total_count]
+	if completed_count == total_count:
+		_quest_header.add_theme_color_override("font_color", Color(0.3, 0.95, 0.45))
+	else:
+		_quest_header.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+
+	for q in quests:
+		var qid: String = q.get("id", "")
+		if not _quest_items.has(qid):
+			continue
+		var item: Dictionary = _quest_items[qid]
+		var is_comp: bool = q.get("completed", false)
+		var check: Label = item.check
+		var title: Label = item.title
+		var hint: Label = item.hint
+
+		if is_comp:
+			check.text = "[✓]"
+			check.add_theme_color_override("font_color", Color(0.25, 0.95, 0.4))
+			title.add_theme_color_override("font_color", Color(0.65, 0.85, 0.65))
+			hint.text = "Bajarildi (+%d XP)" % q.get("xp", 50)
+			hint.add_theme_color_override("font_color", Color(0.5, 0.85, 0.5))
+		else:
+			check.text = "[○]"
+			check.add_theme_color_override("font_color", Color(1.0, 0.78, 0.25))
+			title.add_theme_color_override("font_color", Color(0.95, 0.92, 0.85))
+			hint.text = q.get("hint", q.get("desc", ""))
+			hint.add_theme_color_override("font_color", Color(0.72, 0.7, 0.65))
 
 
 func _setup_banner_ui() -> void:
 	_banner_panel = PanelContainer.new()
 	_banner_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_banner_panel.offset_top = 40
-	_banner_panel.offset_left = -220
-	_banner_panel.offset_right = 220
-	_banner_panel.offset_bottom = 110
+	_banner_panel.offset_left = -230
+	_banner_panel.offset_right = 230
+	_banner_panel.offset_bottom = 112
 
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.06, 0.05, 0.92)
+	style.bg_color = Color(0.08, 0.06, 0.05, 0.94)
 	style.border_width_left = 2
 	style.border_width_right = 2
 	style.border_width_top = 2
 	style.border_width_bottom = 2
-	style.border_color = Color(1.0, 0.8, 0.2)
+	style.border_color = Color(1.0, 0.82, 0.25)
 	style.corner_radius_top_left = 6
 	style.corner_radius_top_right = 6
 	style.corner_radius_bottom_left = 6
@@ -400,27 +523,24 @@ func show_banner(title: String, subtitle: String) -> void:
 	if _banner_tween and _banner_tween.is_valid():
 		_banner_tween.kill()
 	_banner_tween = create_tween()
-	_banner_tween.tween_property(_banner_panel, "modulate:a", 1.0, 0.3)
-	_banner_tween.tween_interval(2.5)
-	_banner_tween.tween_property(_banner_panel, "modulate:a", 0.0, 0.5)
+	_banner_tween.tween_property(_banner_panel, "modulate:a", 1.0, 0.25)
+	_banner_tween.tween_interval(2.6)
+	_banner_tween.tween_property(_banner_panel, "modulate:a", 0.0, 0.45)
 
 
 func _connect_quests() -> void:
 	var qsystem = get_tree().get_first_node_in_group("quest_system")
 	if qsystem == null:
 		return
-	if qsystem.has_signal("quest_updated"):
-		qsystem.connect("quest_updated", func(_id: String, title: String, text: String, _comp: bool):
-			_quest_title_label.text = title
-			_quest_desc_label.text = text)
+	if qsystem.has_signal("quest_state_changed"):
+		qsystem.connect("quest_state_changed", func(_id: String, _comp: bool):
+			_refresh_quest_tracker())
 	if qsystem.has_signal("banner_requested"):
 		qsystem.connect("banner_requested", show_banner)
+	if qsystem.has_signal("all_quests_completed"):
+		qsystem.connect("all_quests_completed", _on_all_quests_completed)
 
-	if qsystem.has_method("get_active_quest"):
-		var q: Dictionary = qsystem.get_active_quest()
-		if not q.is_empty():
-			_quest_title_label.text = q.get("title", "")
-			_quest_desc_label.text = q.get("desc", "")
+	_refresh_quest_tracker()
 
 
 func _connect_progression() -> void:

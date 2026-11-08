@@ -80,8 +80,11 @@ func _physics_process(delta: float) -> void:
 	var collider: Object = hit.collider
 	if collider != null and collider.has_method("take_damage"):
 		collider.take_damage(damage, from, 3.0)
+		FX.sparks(hit.position, hit.normal, Color(1.0, 0.45, 0.15), 16)
 		FX.hit_stop(0.04)
 		queue_free()
 	else:
+		FX.sparks(hit.position, hit.normal, Color(0.9, 0.8, 0.5), 10)
+		FX.dust(hit.position, 6, 0.7)
 		_stuck = true
 		_life = 3.0
