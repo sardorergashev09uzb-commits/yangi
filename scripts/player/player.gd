@@ -152,6 +152,12 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_regen(delta)
 
+	# Cheksizlikka qulashdan himoya (Void Fall Protection):
+	# Agar o'yinchi kutilmaganda xaritadan pastga qulab ketsa (Y < -15.0), uni xavfsiz oxirgi joyga qaytaramiz
+	if global_position.y < -15.0 and state != State.DEAD:
+		global_position = _spawn + Vector3.UP * 0.5
+		velocity = Vector3.ZERO
+
 
 # ---------------------------------------------------------------- Oddiy holat
 

@@ -51,8 +51,8 @@ func _ready() -> void:
 	dbox.add_to_group("dialog_box")
 	add_child(dbox)
 
-	# Yagona yaxlit ulkan Boysun dashti zamini (Z-fighting mutlaqo yo'q)
-	_box(Vector3(20, -1.0, 10), Vector3(320, 2.0, 320), Color(0.42, 0.45, 0.28))
+	# Yagona yaxlit ulkan Boysun dashti zamini: Shimoldagi Zindon va Qal'agacha to'liq cho'zilgan (Z = -220 gacha)
+	_box(Vector3(0, -1.0, -30), Vector3(450, 2.0, 420), Color(0.42, 0.45, 0.28))
 
 	# Mashg'ulot tosh maydoni (Alpomish boshlang'ich mashq o'rni, Y = 0.01 da tosh to'shama)
 	_box(Vector3(0, 0.01, -2), Vector3(28, 0.02, 28), Color(0.46, 0.43, 0.38))
@@ -304,6 +304,9 @@ func _build_boss_arena() -> void:
 
 	# Darvozani tushirish uchun ichki tosh richag (qamalib qolmaslik uchun)
 	_build_gate_lever(arena_center + Vector3(7.5, 0.0, 21.0))
+
+	# Arena ortidagi tosh yo'lak (Zindon darvozasiga olib boruvchi)
+	_box(Vector3(0, 0.02, -115), Vector3(12, 0.1, 26), Color(0.28, 0.26, 0.29))
 
 	# 11-bosqich: Shimoliy devor ortidagi Qalmoq Zindoni Darvozasi
 	_dungeon_gate = DungeonGateScript.new()
