@@ -110,7 +110,7 @@ func _physics_process(delta: float) -> void:
 	_update_bow_visuals()
 
 	if is_mounted:
-		# Ot ustida: harakatni ot bajaradi, o'yinchi yuzlanish va kamon bilan jang qiladi
+		# Ot ustida: harakatni ot bajaradi, o'yinchi yuzlanish, kamon VA ot ustida qilich zarbasini bera oladi!
 		velocity = Vector3.ZERO
 		_face(_cam_forward(), delta)
 		aiming = Input.is_action_pressed("aim")
@@ -119,6 +119,13 @@ func _physics_process(delta: float) -> void:
 			_bow(delta)
 		else:
 			_cancel_bow()
+			if state == State.ATTACK:
+				_attack_tick(delta)
+			elif Input.is_action_just_pressed("attack_light"):
+				_start_attack(false, 0)
+			elif Input.is_action_just_pressed("attack_heavy"):
+				_start_attack(true, 0)
+		_regen(delta)
 		return
 
 	match state:
@@ -418,12 +425,14 @@ func _attack_tick(delta: float) -> void:
 	# Vaqt oynasiga qarab harakat: tayyorlanish (to'xtash), zarba (oldinga siljish), tiklanish
 	var lunge: float = _attack.lunge
 	if _attack_time >= windup and _attack_time < strike_end:
-		velocity.x = _attack_dir.x * lunge
-		velocity.z = _attack_dir.z * lunge
+		if not is_mounted:
+			velocity.x = _attack_dir.x * lunge
+			velocity.z = _attack_dir.z * lunge
 		_check_hits()
 	else:
-		velocity.x = move_toward(velocity.x, 0.0, 40.0 * delta)
-		velocity.z = move_toward(velocity.z, 0.0, 40.0 * delta)
+		if not is_mounted:
+			velocity.x = move_toward(velocity.x, 0.0, 40.0 * delta)
+			velocity.z = move_toward(velocity.z, 0.0, 40.0 * delta)
 	velocity.y -= gravity * delta
 
 	_update_swing(windup, active, recover)
@@ -444,10 +453,23 @@ func _attack_tick(delta: float) -> void:
 
 func _check_hits() -> void:
 	var dmg: float = _attack.damage * GameSettings.get_mult("player_dmg")
+	if is_mounted and mounted_horse and mounted_horse.get("galloping"):
+		dmg *= 1.3  # Ot shiddatli chopganda qilich kuchi +30%
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("sword_mastery", false):
 		dmg *= 1.35
-	for b in hitbox.get_overlapping_bodies():
+
+	# Ot ustida hitbox balandroq bo'lishi mumkinligi uchun, agar hitbox orqali topilmasa
+	# atrofidagi dushmanlarni (2.5m radiusda) ham qamrab olamiz:
+	var targets: Array = hitbox.get_overlapping_bodies()
+	if is_mounted:
+		for hurtable in get_tree().get_nodes_in_group("hurtable"):
+			if hurtable != self and not hurtable in targets:
+				var d: float = global_position.distance_to(hurtable.global_position)
+				if d < 3.2:
+					targets.append(hurtable)
+
+	for b in targets:
 		if b == self or b in _hit_list or not b.has_method("take_damage"):
 			continue
 		_hit_list.append(b)
