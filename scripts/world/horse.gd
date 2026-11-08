@@ -34,6 +34,13 @@ func _ready() -> void:
 	collision_layer = 1 # Dunyo bilan to'qnashadi
 	collision_mask = 1
 
+	# Pog'onalar, tosh yo'laklar va qiyaliklardan erkin oshib o'tish (Step & Slope handling)
+	floor_snap_length = 0.55
+	floor_constant_speed = true
+	floor_max_angle = deg_to_rad(50.0)
+	floor_stop_on_slope = false
+	max_slides = 6
+
 	_build_visuals()
 
 
@@ -128,9 +135,10 @@ func _build_visuals() -> void:
 	# Kolliziya
 	var col := CollisionShape3D.new()
 	var cbox := BoxShape3D.new()
-	cbox.size = Vector3(1.1, 1.9, 2.4)
+	# Oyoqlarning pastki qismida 0.35m bo'shliq qoldiriladi - bu yo'laklar, tosh pog'onalar va rampalarga tiqilib qolishni 100% yo'qotadi
+	cbox.size = Vector3(1.0, 1.6, 2.2)
 	col.shape = cbox
-	col.position.y = 1.05
+	col.position.y = 1.15
 	add_child(col)
 
 	# Interaction Label
@@ -198,9 +206,15 @@ func _process_mounted(delta: float) -> void:
 	# Sakrash
 	if is_on_floor() and (Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("dodge")):
 		velocity.y = jump_velocity
+		apply_floor_snap()
 
 	if not is_on_floor():
 		velocity.y -= gravity * delta
+		# Agar yerdan uzilsa ham (kichik pog'ona yoki nishablikda) oldinga harakat tezligi o'chmaydi
+		if moving:
+			var fwd := -global_basis.z
+			velocity.x = fwd.x * current_speed
+			velocity.z = fwd.z * current_speed
 
 	# Ot chopganda dushmanlarni urib yiqitish (Trample) va chang chiqarish
 	if _trample_cooldown > 0.0:
