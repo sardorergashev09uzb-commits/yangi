@@ -113,6 +113,14 @@ func _physics_process(delta: float) -> void:
 
 	_update_bow_visuals()
 
+	# Cheksizlikka qulashdan qat'iy himoya (Void Fall Protection - otda bo'lsa ham ishlaydi)
+	if global_position.y < -3.0 and state != State.DEAD:
+		global_position = _spawn + Vector3.UP * 0.5
+		velocity = Vector3.ZERO
+		if is_mounted and mounted_horse != null and is_instance_valid(mounted_horse):
+			mounted_horse.global_position = _spawn + Vector3.UP * 0.5
+			mounted_horse.velocity = Vector3.ZERO
+
 	if is_mounted:
 		# Ot ustida: harakatni ot bajaradi, o'yinchi yuzlanish, kamon VA ot ustida qilich zarbasini bera oladi!
 		velocity = Vector3.ZERO
@@ -154,8 +162,7 @@ func _physics_process(delta: float) -> void:
 
 	# Cheksizlikka qulashdan himoya (Void Fall Protection):
 	# Agar o'yinchi kutilmaganda xaritadan pastga qulab ketsa (Y < -15.0), uni xavfsiz oxirgi joyga qaytaramiz
-	if global_position.y < -4.5 and state != State.DEAD:
-		# Cheksizlikka qulash boshlanishi bilanoq darhol boshlang'ich joyga qaytariladi
+	if global_position.y < -3.0 and state != State.DEAD:
 		global_position = _spawn + Vector3.UP * 0.5
 		velocity = Vector3.ZERO
 

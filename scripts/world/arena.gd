@@ -51,8 +51,11 @@ func _ready() -> void:
 	dbox.add_to_group("dialog_box")
 	add_child(dbox)
 
-	# Yagona yaxlit ulkan Boysun dashti zamini: Shimoldagi Zindon va Qal'agacha to'liq cho'zilgan (Z = -220 gacha)
-	_box(Vector3(0, -1.0, -30), Vector3(450, 2.0, 420), Color(0.42, 0.45, 0.28))
+	# Yagona yaxlit ulkan Boysun dashti zamini: Shimoldagi Zindon va Qal'agacha to'liq cho'zilgan
+	_box(Vector3(0, -1.0, -50), Vector3(500, 2.0, 500), Color(0.42, 0.45, 0.28))
+
+	# Mutlaq xavfsizlik to'shagi (Safety Net Floor) - xarita ostida hech narsa cheksizlikka qulab ketmasligi uchun
+	_box(Vector3(0, -2.5, -50), Vector3(600, 1.0, 600), Color(0.2, 0.2, 0.2))
 
 	# Mashg'ulot tosh maydoni (Alpomish boshlang'ich mashq o'rni, Y = 0.01 da tosh to'shama)
 	_box(Vector3(0, 0.01, -2), Vector3(28, 0.02, 28), Color(0.46, 0.43, 0.38))
@@ -265,10 +268,10 @@ func _build_boss_arena() -> void:
 	_box(arena_center + Vector3(0, 0.05, 0), Vector3(46, 0.3, 46), Color(0.32, 0.3, 0.35))
 
 	# Atrof tosh devorlari
-	# Shimoliy devor: o'rtasida Zindon Darvozasiga o'tish yo'li (10 metr ochiq darvoza o'rni)
-	_box(arena_center + Vector3(-16, 3, -23), Vector3(14, 6, 2), Color(0.25, 0.24, 0.28))
-	_box(arena_center + Vector3(16, 3, -23), Vector3(14, 6, 2), Color(0.25, 0.24, 0.28))
-	_box(arena_center + Vector3(0, 5.5, -23), Vector3(18, 1, 2), Color(0.25, 0.24, 0.28))
+	# Shimoliy devor: Zindon Darvozasiga o'tish yo'li (12 metr kenglikdagi mustahkam arkada)
+	_box(arena_center + Vector3(-17, 3, -23), Vector3(12, 6, 2), Color(0.25, 0.24, 0.28))
+	_box(arena_center + Vector3(17, 3, -23), Vector3(12, 6, 2), Color(0.25, 0.24, 0.28))
+	_box(arena_center + Vector3(0, 6.5, -23), Vector3(14, 1, 2), Color(0.25, 0.24, 0.28))
 	_box(arena_center + Vector3(-23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28))
 	_box(arena_center + Vector3(23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28))
 
@@ -308,10 +311,13 @@ func _build_boss_arena() -> void:
 	# Darvozani tushirish uchun ichki tosh richag (qamalib qolmaslik uchun)
 	_build_gate_lever(arena_center + Vector3(7.5, 0.0, 21.0))
 
-	# Arena ortidagi tosh yo'lak (Zindon darvozasiga va zindonga olib boruvchi to'g'ridan-to'g'ri mustahkam yo'l)
-	_box(Vector3(0, 0.02, -125), Vector3(18, 0.2, 55), Color(0.24, 0.22, 0.25))
+	# Arena ortidagi mustahkam tosh ko'prik yo'lak (Zindon darvozasiga va zindonga to'g'ridan-to'g'ri olib boruvchi yo'l)
+	_box(Vector3(0, 0.05, -127), Vector3(16, 0.4, 46), Color(0.26, 0.24, 0.27))
+	# Yon devorlar (parapetlar - ot yoki o'yinchi hech qachon chetga tushib ketmaydi)
+	_box(Vector3(-8.2, 0.8, -127), Vector3(0.6, 1.5, 46), Color(0.32, 0.3, 0.33))
+	_box(Vector3(8.2, 0.8, -127), Vector3(0.6, 1.5, 46), Color(0.32, 0.3, 0.33))
 
-	# 11-bosqich: Shimoliy devordagi Qalmoq Zindoni Darvozasi
+	# 11-bosqich: Shimoliy devordagi Qalmoq Zindoni Darvozasi (Qora Temir Eshik)
 	_dungeon_gate = DungeonGateScript.new()
 	_dungeon_gate.position = arena_center + Vector3(0, 0, -23)
 	add_child(_dungeon_gate)
@@ -348,6 +354,9 @@ func _process(_delta: float) -> void:
 		_lever_label.visible = d < 4.0 and _arena_gate and _arena_gate.position.y > -4.0
 		if d < 4.0 and Input.is_action_just_pressed("interact"):
 			_open_gate()
+
+	# Global xavfsizlik nazorati: o'yinchi yoki ot xaritadan pastga tushib ketsa
+	_check_void_safety()
 
 
 func _open_gate() -> void:
@@ -523,8 +532,33 @@ func _tree(pos: Vector3, h := 4.0) -> void:
 func _on_dungeon_portal_entered() -> void:
 	var player = get_tree().get_first_node_in_group("player")
 	if player and is_instance_valid(player):
-		# Zindon ichiga teleportatsiya (Z = -135)
-		player.global_position = Vector3(0, 0.2, -135)
-		player.velocity = Vector3.ZERO
+		var target_pos := Vector3(0, 0.2, -135)
+		if player.get("is_mounted") and player.get("mounted_horse"):
+			var horse: CharacterBody3D = player.get("mounted_horse")
+			if is_instance_valid(horse):
+				horse.global_position = target_pos
+				horse.velocity = Vector3.ZERO
+			player.global_position = target_pos + Vector3.UP * 1.5
+			player.velocity = Vector3.ZERO
+		else:
+			player.global_position = target_pos
+			player.velocity = Vector3.ZERO
 		Audio.play_level_up()
-		FX.popup(player.global_position + Vector3.UP * 2.5, 0.0, Color(0.9, 0.2, 0.5))
+		FX.popup(target_pos + Vector3.UP * 2.5, 0.0, Color(0.9, 0.2, 0.5))
+
+
+func _check_void_safety() -> void:
+	var player = get_tree().get_first_node_in_group("player")
+	if player and is_instance_valid(player) and player.global_position.y < -3.0:
+		var safe_p := Vector3(0, 0.5, 0)
+		player.global_position = safe_p
+		player.velocity = Vector3.ZERO
+		if player.get("is_mounted") and player.get("mounted_horse"):
+			var h = player.get("mounted_horse")
+			if is_instance_valid(h):
+				h.global_position = safe_p
+				h.velocity = Vector3.ZERO
+	if _horse and is_instance_valid(_horse) and _horse.global_position.y < -3.0:
+		_horse.global_position = Vector3(6.0, 0.5, 4.0)
+		_horse.velocity = Vector3.ZERO
+

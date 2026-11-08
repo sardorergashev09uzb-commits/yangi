@@ -27,9 +27,11 @@ var _anim_time := 0.0
 var _mount_cooldown := 0.0
 var _trample_cooldown := 0.0
 var _gallop_dust_timer := 0.0
+var _spawn_pos := Vector3(6.0, 0.5, 4.0)
 
 
 func _ready() -> void:
+	_spawn_pos = global_position
 	add_to_group("horses")
 	collision_layer = 1 # Dunyo bilan to'qnashadi
 	collision_mask = 1
@@ -164,6 +166,14 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_animate_legs(delta)
+
+	# Cheksizlikka qulashdan himoya (Void Fall Protection)
+	if global_position.y < -3.0:
+		global_position = _spawn_pos + Vector3.UP * 0.5
+		velocity = Vector3.ZERO
+		if is_mounted and rider != null and is_instance_valid(rider):
+			rider.global_position = global_position + Vector3.UP * 1.5
+			rider.velocity = Vector3.ZERO
 
 	# Chavandozni silkinishsiz aynan egar ustida ushlab turish
 	if is_mounted and rider != null:

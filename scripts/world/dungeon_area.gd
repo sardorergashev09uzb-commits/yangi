@@ -23,7 +23,12 @@ func _build_dungeon() -> void:
 	# Devorlar (Tosh panjara va zindon qal'asi)
 	_box(Vector3(-18, 4.0, 0), Vector3(1.0, 8.0, 48), Color(0.18, 0.16, 0.18))
 	_box(Vector3(18, 4.0, 0), Vector3(1.0, 8.0, 48), Color(0.18, 0.16, 0.18))
-	_box(Vector3(0, 4.0, 24), Vector3(36, 8.0, 1.0), Color(0.18, 0.16, 0.18))
+	# Janubiy kirish darvozasi (Arenadan to'g'ridan-to'g'ri o'tish uchun 14 metrli peshtoq)
+	_box(Vector3(-12.5, 4.0, 24), Vector3(11.0, 8.0, 1.0), Color(0.18, 0.16, 0.18))
+	_box(Vector3(12.5, 4.0, 24), Vector3(11.0, 8.0, 1.0), Color(0.18, 0.16, 0.18))
+	_box(Vector3(0, 6.5, 24), Vector3(14.0, 3.0, 1.0), Color(0.18, 0.16, 0.18))
+	_torch(Vector3(-6.5, 3.5, 23.5))
+	_torch(Vector3(6.5, 3.5, 23.5))
 	_box(Vector3(0, 4.0, -24), Vector3(36, 8.0, 1.0), Color(0.18, 0.16, 0.18))
 
 	# Shift (Tepadan qorong'u gumbaz)
