@@ -73,6 +73,10 @@ var _buffer_light := 0.0
 var _buffer_heavy := 0.0
 var _drawing := false
 
+var _bow_back: Node3D
+var _bow_hand: Node3D
+var _bow_arrow_mesh: MeshInstance3D
+
 @onready var model: Node3D = $Model
 @onready var rig: CameraRig = $CameraRig
 @onready var weapon: Node3D = $Model/WeaponPivot
@@ -87,12 +91,15 @@ func _ready() -> void:
 	collision_mask = 1 | (1 << 2)
 	hitbox.collision_layer = 1 << 3
 	hitbox.collision_mask = 1 << 2
+	_build_bow_visuals()
 
 
 func _physics_process(delta: float) -> void:
 	if _hit_invuln > 0.0:
 		_hit_invuln -= delta
 		model.visible = int(_hit_invuln * 20.0) % 2 == 0 or _hit_invuln <= 0.0
+
+	_update_bow_visuals()
 
 	if is_mounted:
 		# Ot ustida: harakatni ot bajaradi, o'yinchi yuzlanish va kamon bilan jang qiladi
@@ -134,7 +141,7 @@ func _normal(delta: float) -> void:
 	var dir := Vector3(input.x, 0.0, input.y).rotated(Vector3.UP, rig.yaw)
 	var moving := dir.length() > 0.1
 
-	aiming = Input.is_action_pressed("aim") and is_on_floor()
+	aiming = Input.is_action_pressed("aim")
 	rig.aiming = aiming
 
 	var sprinting := moving and not aiming and Input.is_action_pressed("sprint") \
@@ -191,14 +198,17 @@ func _bow(delta: float) -> void:
 			_drawing = true
 			bow_charge = 0.0
 		return
+
 	var draw_spd := BOW_DRAW_TIME
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("bow_mastery", false):
 		draw_spd *= 0.55
+
 	bow_charge = minf(bow_charge + delta / draw_spd, 1.0)
+
+	# Agar qo'yib yuborilsa - darhol o'q otiladi! (har qanday click ishlaydi)
 	if Input.is_action_just_released("attack_light"):
-		if bow_charge > 0.15:
-			_fire_bow(bow_charge)
+		_fire_bow(maxf(bow_charge, 0.2))
 		_cancel_bow()
 
 
@@ -212,22 +222,135 @@ func _fire_bow(charge: float) -> void:
 	var cam := rig.camera
 	var origin := cam.global_position
 	var fwd := -cam.global_basis.z
-	var far := origin + fwd * 120.0
-	var query := PhysicsRayQueryParameters3D.create(origin, far, 1 | (1 << 2), [get_rid()])
+	var far := origin + fwd * 140.0
+
+	var excludes: Array[RID] = [get_rid()]
+	if is_mounted and mounted_horse and is_instance_valid(mounted_horse):
+		excludes.append(mounted_horse.get_rid())
+
+	var query := PhysicsRayQueryParameters3D.create(origin, far, 1 | (1 << 2), excludes)
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	var target: Vector3 = far if hit.is_empty() else hit.position
-	var spawn := global_position + Vector3.UP * 1.45 + fwd * 0.6
+
+	# O'q o'yinchining oldidan chiqishi (ot yoki qahramon tanasiga urilib qolmasligi uchun)
+	var spawn := global_position + Vector3.UP * 1.45 + fwd * 1.0
 	var arrow := Arrow.new()
 	arrow.shooter = self
-	var base_dmg := lerpf(14.0, 40.0, charge)
+	if is_mounted and mounted_horse and is_instance_valid(mounted_horse):
+		arrow.extra_exclude = [mounted_horse.get_rid()]
+
+	var base_dmg := lerpf(16.0, 44.0, charge)
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("bow_mastery", false):
 		base_dmg *= 1.4
 	arrow.damage = base_dmg
-	arrow.velocity = (target - spawn).normalized() * lerpf(28.0, 55.0, charge)
+	arrow.velocity = (target - spawn).normalized() * lerpf(32.0, 60.0, charge)
+
 	get_tree().current_scene.add_child(arrow)
 	arrow.global_position = spawn
-	rig.shake(0.05)
+	rig.shake(0.08)
+	FX.popup(spawn, 0.0, Color(1.0, 0.8, 0.3))
+
+
+func _build_bow_visuals() -> void:
+	# 1. Orqadagi kamon (Yelkada osilgan)
+	_bow_back = _create_bow_mesh()
+	_bow_back.position = Vector3(-0.15, 1.35, 0.38)
+	_bow_back.rotation_degrees = Vector3(15.0, -20.0, 45.0)
+	model.add_child(_bow_back)
+
+	# 2. Qo'ldagi kamon (Nishonlaganda chap qo'lga o'tadi)
+	_bow_hand = _create_bow_mesh()
+	_bow_hand.position = Vector3(-0.35, 1.25, -0.6)
+	_bow_hand.rotation_degrees = Vector3(0.0, 0.0, 10.0)
+	_bow_hand.visible = false
+	model.add_child(_bow_hand)
+
+	# Qo'ldagi o'q (faqat tortilganda ko'rinadi)
+	_bow_arrow_mesh = MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.012
+	cyl.bottom_radius = 0.012
+	cyl.height = 0.95
+	var amat := StandardMaterial3D.new()
+	amat.albedo_color = Color(0.85, 0.7, 0.4)
+	_bow_arrow_mesh.mesh = cyl
+	_bow_arrow_mesh.material_override = amat
+	_bow_arrow_mesh.rotation_degrees.x = 90.0
+	_bow_arrow_mesh.position = Vector3(0.12, 0, 0)
+	_bow_arrow_mesh.visible = false
+	_bow_hand.add_child(_bow_arrow_mesh)
+
+
+func _create_bow_mesh() -> Node3D:
+	var root := Node3D.new()
+	var wood_mat := StandardMaterial3D.new()
+	wood_mat.albedo_color = Color(0.42, 0.22, 0.1) # Qizg'ish-to'q eman yog'ochi
+	wood_mat.roughness = 0.6
+
+	var gold_mat := StandardMaterial3D.new()
+	gold_mat.albedo_color = Color(0.85, 0.7, 0.2) # Oltin/suyak qoplama
+
+	var string_mat := StandardMaterial3D.new()
+	string_mat.albedo_color = Color(0.95, 0.95, 0.92) # Oq pay kamon ipi
+
+	# Tutqich
+	var grip := MeshInstance3D.new()
+	var gbox := BoxMesh.new()
+	gbox.size = Vector3(0.04, 0.25, 0.04)
+	grip.mesh = gbox
+	grip.material_override = gold_mat
+	root.add_child(grip)
+
+	# Yuqori yelka (Yuqoriga egilgan)
+	var upper := MeshInstance3D.new()
+	var ubox := BoxMesh.new()
+	ubox.size = Vector3(0.035, 0.55, 0.035)
+	upper.mesh = ubox
+	upper.material_override = wood_mat
+	upper.position = Vector3(0, 0.35, -0.06)
+	upper.rotation_degrees.x = -22.0
+	root.add_child(upper)
+
+	# Pastki yelka (Pastga egilgan)
+	var lower := MeshInstance3D.new()
+	var lbox := BoxMesh.new()
+	lbox.size = Vector3(0.035, 0.55, 0.035)
+	lower.mesh = lbox
+	lower.material_override = wood_mat
+	lower.position = Vector3(0, -0.35, -0.06)
+	lower.rotation_degrees.x = 22.0
+	root.add_child(lower)
+
+	# Kamon ipi (String)
+	var string_node := MeshInstance3D.new()
+	var scyl := CylinderMesh.new()
+	scyl.top_radius = 0.005
+	scyl.bottom_radius = 0.005
+	scyl.height = 1.15
+	string_node.mesh = scyl
+	string_node.material_override = string_mat
+	string_node.position = Vector3(0, 0, 0.04)
+	root.add_child(string_node)
+
+	return root
+
+
+func _update_bow_visuals() -> void:
+	if _bow_hand == null or _bow_back == null:
+		return
+	if aiming:
+		weapon.visible = false
+		_bow_back.visible = false
+		_bow_hand.visible = true
+		_bow_arrow_mesh.visible = _drawing
+		if _drawing:
+			_bow_arrow_mesh.position.z = lerpf(0.0, 0.35, bow_charge)
+	else:
+		weapon.visible = true
+		_bow_back.visible = true
+		_bow_hand.visible = false
+		_bow_arrow_mesh.visible = false
 
 
 # ---------------------------------------------------------------- Yaqin jang
