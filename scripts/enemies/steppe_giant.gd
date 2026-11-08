@@ -185,6 +185,7 @@ func _tick_stomp(dir: Vector3, delta: float) -> void:
 		FX.dust(global_position, 18, 2.0)
 		FX.sparks(global_position + Vector3(0, 0.2, 0), Vector3.UP, Color(0.9, 0.8, 0.4), 16)
 		FX.camera_shake(0.4)
+		Audio.play_boss_slam()
 		_cooldown = 2.0
 		state = State.CHASE
 

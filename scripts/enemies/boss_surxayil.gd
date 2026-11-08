@@ -251,6 +251,7 @@ func _spawn_shockwave() -> void:
 	FX.dust(impact_pt, 20, 2.2)
 	FX.sparks(impact_pt, Vector3.UP, Color(1.0, 0.45, 0.15), 18)
 	FX.camera_shake(0.45)
+	Audio.play_boss_slam()
 
 
 # ---------------------------------------------------------------- Hujum 2: SWEEP (Keng aylanma)

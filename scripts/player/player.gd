@@ -162,11 +162,12 @@ func _normal(delta: float) -> void:
 	if is_on_floor():
 		if Input.is_action_just_pressed("jump") and not aiming:
 			velocity.y = jump_velocity
+			Audio.play_jump()
 	else:
 		velocity.y -= gravity * delta
 
 	# Yuzlanish faqat sichqoncha (kamera) bilan boshqariladi; WASD faqat harakat.
-	_face(_cam_forward(), delta)
+	_face(_cam_forward(), delta, aiming)
 
 	if Input.is_action_just_pressed("dodge") and is_on_floor() and stamina >= dodge_cost:
 		_cancel_bow()
@@ -197,6 +198,7 @@ func _bow(delta: float) -> void:
 		if Input.is_action_just_pressed("attack_light") and stamina >= BOW_COST:
 			_drawing = true
 			bow_charge = 0.0
+			Audio.play_bow_draw()
 		return
 
 	var draw_spd := BOW_DRAW_TIME
@@ -219,36 +221,35 @@ func _cancel_bow() -> void:
 
 func _fire_bow(charge: float) -> void:
 	_use_stamina(BOW_COST)
-	var cam := rig.camera
-	var origin := cam.global_position
-	var fwd := -cam.global_basis.z
-	var far := origin + fwd * 140.0
-
+	Audio.play_bow_shoot()
 	var excludes: Array[RID] = [get_rid()]
 	if is_mounted and mounted_horse and is_instance_valid(mounted_horse):
 		excludes.append(mounted_horse.get_rid())
 
-	var query := PhysicsRayQueryParameters3D.create(origin, far, 1 | (1 << 2), excludes)
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	var target: Vector3 = far if hit.is_empty() else hit.position
+	var aim_info: Dictionary = rig.get_aim_target(140.0, excludes)
+	var target: Vector3 = aim_info.get("target", global_position - rig.global_basis.z * 140.0)
+	var ray_dir: Vector3 = aim_info.get("dir", -rig.global_basis.z)
 
-	# O'q o'yinchining oldidan chiqishi (ot yoki qahramon tanasiga urilib qolmasligi uchun)
-	var spawn := global_position + Vector3.UP * 1.45 + fwd * 1.0
+	# O'q kamon qo'li yaqinidan, lekin qahramon va ot to'sig'idan oldinda chiqadi
+	var spawn := global_position + Vector3.UP * 1.45 + ray_dir * 1.0
+	if _bow_hand and is_instance_valid(_bow_hand) and _bow_hand.is_inside_tree():
+		spawn = _bow_hand.global_position + ray_dir * 0.75
+
 	var arrow := Arrow.new()
 	arrow.shooter = self
 	if is_mounted and mounted_horse and is_instance_valid(mounted_horse):
 		arrow.extra_exclude = [mounted_horse.get_rid()]
 
-	var base_dmg := lerpf(16.0, 44.0, charge)
+	var base_dmg := lerpf(18.0, 48.0, charge)
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("bow_mastery", false):
 		base_dmg *= 1.4
 	arrow.damage = base_dmg
-	arrow.velocity = (target - spawn).normalized() * lerpf(32.0, 60.0, charge)
+	arrow.velocity = (target - spawn).normalized() * lerpf(36.0, 66.0, charge)
 
 	get_tree().current_scene.add_child(arrow)
 	arrow.global_position = spawn
-	rig.shake(0.08)
+	rig.shake(0.04)
 	FX.popup(spawn, 0.0, Color(1.0, 0.8, 0.3))
 
 
@@ -343,6 +344,8 @@ func _update_bow_visuals() -> void:
 		weapon.visible = false
 		_bow_back.visible = false
 		_bow_hand.visible = true
+		if rig:
+			_bow_hand.rotation_degrees.x = rad_to_deg(rig.pitch)
 		_bow_arrow_mesh.visible = _drawing
 		if _drawing:
 			_bow_arrow_mesh.position.z = lerpf(0.0, 0.35, bow_charge)
@@ -366,6 +369,7 @@ func _start_attack(heavy: bool, index: int) -> void:
 	_buffer_light = 0.0
 	_buffer_heavy = 0.0
 	_use_stamina(_attack.cost)
+	Audio.play_sword_swing()
 
 	_attack_dir = _cam_forward()
 	_face(_attack_dir, 1.0 / 60.0, true)
@@ -436,6 +440,10 @@ func _check_hits() -> void:
 		b.take_damage(dmg, global_position, knock)
 		FX.hit_stop(0.12 if _attack_heavy else 0.07)
 		FX.sparks(b.global_position + Vector3(0, 1.0, 0), Vector3.UP, Color(1.0, 0.85, 0.25))
+		if _attack_heavy:
+			Audio.play_heavy_hit()
+		else:
+			Audio.play_hit()
 		rig.shake(0.3 if _attack_heavy else 0.15)
 
 
@@ -472,6 +480,7 @@ func _start_dodge(dir: Vector3) -> void:
 	state = State.DODGE
 	_dodge_invuln = true
 	FX.dust(global_position, 8, 0.9)
+	Audio.play_dodge()
 
 
 func _dodge(delta: float) -> void:

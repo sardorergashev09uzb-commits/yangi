@@ -202,6 +202,56 @@ func _build_settings_tab() -> void:
 	_fov_val_label.text = "70°"
 	fov_row.add_child(_fov_val_label)
 
+	# Ovoz effektlari (SFX)
+	var sfx_row := HBoxContainer.new()
+	tab.add_child(sfx_row)
+	var sfx_label := Label.new()
+	sfx_label.text = "Ovoz effektlari (SFX):"
+	sfx_label.custom_minimum_size = Vector2(200, 0)
+	sfx_row.add_child(sfx_label)
+
+	var sfx_slider := HSlider.new()
+	sfx_slider.min_value = 0.0
+	sfx_slider.max_value = 1.0
+	sfx_slider.step = 0.05
+	sfx_slider.value = db_to_linear(Audio.sfx_volume_db)
+	sfx_slider.custom_minimum_size = Vector2(220, 0)
+	sfx_row.add_child(sfx_slider)
+
+	var sfx_val := Label.new()
+	sfx_val.text = "%d%%" % int(sfx_slider.value * 100)
+	sfx_row.add_child(sfx_val)
+
+	sfx_slider.value_changed.connect(func(v: float):
+		sfx_val.text = "%d%%" % int(v * 100)
+		Audio.sfx_volume_db = linear_to_db(v) if v > 0.01 else -80.0
+		Audio.play_hit())
+
+	# Jangovar Musiqa (Doyra)
+	var music_row := HBoxContainer.new()
+	tab.add_child(music_row)
+	var m_label := Label.new()
+	m_label.text = "Jang musiqasi (Doyra):"
+	m_label.custom_minimum_size = Vector2(200, 0)
+	music_row.add_child(m_label)
+
+	var music_slider := HSlider.new()
+	music_slider.min_value = 0.0
+	music_slider.max_value = 1.0
+	music_slider.step = 0.05
+	music_slider.value = db_to_linear(Audio.music_volume_db)
+	music_slider.custom_minimum_size = Vector2(220, 0)
+	music_row.add_child(music_slider)
+
+	var m_val := Label.new()
+	m_val.text = "%d%%" % int(music_slider.value * 100)
+	music_row.add_child(m_val)
+
+	music_slider.value_changed.connect(func(v: float):
+		m_val.text = "%d%%" % int(v * 100)
+		Audio.music_volume_db = linear_to_db(v) if v > 0.01 else -80.0
+		Audio.is_music_enabled = v > 0.01)
+
 	var info := Label.new()
 	info.text = "Qisqa tugmalar:\n[ TAB / K ] – Doston jurnali va Ko'nikmalar\n[ E ] – Suhbatlashish | [ F ] – Boychiborga minish\n[ T ] – Joyida tezkor qayta boshlash"
 	info.add_theme_font_size_override("font_size", 14)

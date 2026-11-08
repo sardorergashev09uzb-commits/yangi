@@ -90,6 +90,7 @@ func complete_quest(id: String) -> void:
 	q.completed = true
 	quest_state_changed.emit(id, true)
 	banner_requested.emit("VAZIFA BAJARILDI!", "%s (+%d XP)" % [q.title, q.get("xp", 50)])
+	Audio.play_level_up()
 
 	# XP berish
 	var prog = get_tree().get_first_node_in_group("progression")
@@ -107,6 +108,7 @@ func _check_all_completed() -> void:
 
 	# Barcha 4 ta vazifa bajarildi!
 	all_quests_completed.emit()
+	Audio.play_victory()
 	banner_requested.emit(
 		"DOSTON QAHRAMONI!",
 		"Barcha shartlar bajarildi! Barchinoy ozod, Qo'ng'irot eli faxri!"

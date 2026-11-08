@@ -213,6 +213,7 @@ func _process_mounted(delta: float) -> void:
 		if _gallop_dust_timer <= 0.0:
 			_gallop_dust_timer = 0.16
 			FX.dust(global_position - global_basis.z * 0.9, 4, 0.75)
+			Audio.play_horse_step()
 
 
 func _check_trample() -> void:
@@ -224,6 +225,7 @@ func _check_trample() -> void:
 				FX.camera_shake(0.35)
 				FX.sparks(e.global_position + Vector3(0, 1.0, 0), Vector3.UP, Color(1.0, 0.75, 0.2), 12)
 				FX.dust(global_position, 8, 1.1)
+				Audio.play_heavy_hit()
 				_trample_cooldown = 0.35
 				return
 
