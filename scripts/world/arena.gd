@@ -265,7 +265,10 @@ func _build_boss_arena() -> void:
 	_box(arena_center + Vector3(0, 0.05, 0), Vector3(46, 0.3, 46), Color(0.32, 0.3, 0.35))
 
 	# Atrof tosh devorlari
-	_box(arena_center + Vector3(0, 3, -23), Vector3(46, 6, 2), Color(0.25, 0.24, 0.28))
+	# Shimoliy devor: o'rtasida Zindon Darvozasiga o'tish yo'li (10 metr ochiq darvoza o'rni)
+	_box(arena_center + Vector3(-16, 3, -23), Vector3(14, 6, 2), Color(0.25, 0.24, 0.28))
+	_box(arena_center + Vector3(16, 3, -23), Vector3(14, 6, 2), Color(0.25, 0.24, 0.28))
+	_box(arena_center + Vector3(0, 5.5, -23), Vector3(18, 1, 2), Color(0.25, 0.24, 0.28))
 	_box(arena_center + Vector3(-23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28))
 	_box(arena_center + Vector3(23, 3, 0), Vector3(2, 6, 46), Color(0.25, 0.24, 0.28))
 
@@ -305,10 +308,10 @@ func _build_boss_arena() -> void:
 	# Darvozani tushirish uchun ichki tosh richag (qamalib qolmaslik uchun)
 	_build_gate_lever(arena_center + Vector3(7.5, 0.0, 21.0))
 
-	# Arena ortidagi tosh yo'lak (Zindon darvozasiga olib boruvchi)
-	_box(Vector3(0, 0.02, -115), Vector3(12, 0.1, 26), Color(0.28, 0.26, 0.29))
+	# Arena ortidagi tosh yo'lak (Zindon darvozasiga va zindonga olib boruvchi to'g'ridan-to'g'ri mustahkam yo'l)
+	_box(Vector3(0, 0.02, -125), Vector3(18, 0.2, 55), Color(0.24, 0.22, 0.25))
 
-	# 11-bosqich: Shimoliy devor ortidagi Qalmoq Zindoni Darvozasi
+	# 11-bosqich: Shimoliy devordagi Qalmoq Zindoni Darvozasi
 	_dungeon_gate = DungeonGateScript.new()
 	_dungeon_gate.position = arena_center + Vector3(0, 0, -23)
 	add_child(_dungeon_gate)
@@ -372,9 +375,10 @@ func _on_player_entered_arena(body: Node3D) -> void:
 func _on_boss_defeated() -> void:
 	_boss_defeated_flag = true
 	_fight_started = false
+	# Boss qayerda o'lishidan qat'iy nazar ikkala darvoza to'liq ochiladi
 	if _arena_gate:
 		var t := create_tween()
-		t.tween_property(_arena_gate, "position:y", -6.0, 1.2)
+		t.tween_property(_arena_gate, "position:y", -6.0, 0.8)
 	if _dungeon_gate and is_instance_valid(_dungeon_gate):
 		_dungeon_gate.unlock()
 	var qsys = get_tree().get_first_node_in_group("quest_system")

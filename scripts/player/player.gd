@@ -154,7 +154,8 @@ func _physics_process(delta: float) -> void:
 
 	# Cheksizlikka qulashdan himoya (Void Fall Protection):
 	# Agar o'yinchi kutilmaganda xaritadan pastga qulab ketsa (Y < -15.0), uni xavfsiz oxirgi joyga qaytaramiz
-	if global_position.y < -15.0 and state != State.DEAD:
+	if global_position.y < -4.5 and state != State.DEAD:
+		# Cheksizlikka qulash boshlanishi bilanoq darhol boshlang'ich joyga qaytariladi
 		global_position = _spawn + Vector3.UP * 0.5
 		velocity = Vector3.ZERO
 
@@ -271,10 +272,8 @@ func _fire_bow(charge: float) -> void:
 	var target: Vector3 = aim_info.get("target", global_position - rig.global_basis.z * 140.0)
 	var ray_dir: Vector3 = aim_info.get("dir", -rig.global_basis.z)
 
-	# O'q kamon qo'li yaqinidan, lekin qahramon va ot to'sig'idan oldinda chiqadi
-	var spawn := global_position + Vector3.UP * 1.45 + ray_dir * 1.0
-	if _bow_hand and is_instance_valid(_bow_hand) and _bow_hand.is_inside_tree():
-		spawn = _bow_hand.global_position + ray_dir * 0.75
+	# O'q krossxayr nuri (kamera markazi) chizig'i bo'ylab to'g'ridan-to'g'ri chiqadi (aynan krossxayrga uradi)
+	var spawn := global_position + Vector3.UP * 1.4 + ray_dir * 1.1
 
 	var arrow := Arrow.new()
 	arrow.shooter = self
