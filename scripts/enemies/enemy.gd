@@ -372,6 +372,24 @@ func take_damage(amount: float, from_pos := Vector3.ZERO, knockback := 4.0) -> v
 	_timer = 0.7 if knockback >= 8.0 else 0.4
 
 
+## Parry: dushman muvozanatini yo'qotadi va uzoqroq larzaga tushadi
+func get_parried(from_pos: Vector3) -> void:
+	if state == State.DEAD:
+		return
+	_release_token()
+	_weapon.rotation_degrees.x = 0.0
+	_mat.emission_energy_multiplier = 0.0
+	var away := global_position - from_pos
+	away.y = 0.0
+	if away.length() > 0.01:
+		away = away.normalized()
+		velocity.x = away.x * 4.0
+		velocity.z = away.z * 4.0
+	FX.popup(global_position + Vector3.UP * 2.3, 0.0, Color(0.5, 0.9, 1.0))
+	state = State.STAGGER
+	_timer = 1.3
+
+
 func _die() -> void:
 	state = State.DEAD
 	_release_token()

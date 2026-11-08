@@ -7,7 +7,7 @@ signal health_changed(current: float, maximum: float)
 signal died
 signal respawned
 
-enum State { NORMAL, DODGE, ATTACK, HURT, DEAD }
+enum State { NORMAL, DODGE, ATTACK, HURT, DEAD, BLOCK }
 
 # Jang ma'lumotlari: vaqtlar soniyada. swing: 0 - chapga, 1 - o'ngga, 2 - tepadan pastga
 const LIGHT_COMBO := [
@@ -18,6 +18,10 @@ const LIGHT_COMBO := [
 const HEAVY := {"damage": 50.0, "windup": 0.38, "active": 0.16, "recover": 0.48, "lunge": 5.0, "swing": 2, "cost": 25.0}
 const BOW_DRAW_TIME := 0.8
 const BOW_COST := 8.0
+const PARRY_WINDOW := 0.2      # Blok boshlanishidan keyingi "parry" oynasi (soniya)
+const BLOCK_REDUCTION := 0.25  # Blokda o'tadigan zarar ulushi
+const BLOCK_STAMINA_MULT := 0.9
+const BLOCK_ARC_DEG := 110.0   # Old tomondan himoya burchagi
 
 @export_group("Harakat")
 @export var run_speed := 5.5
@@ -72,6 +76,10 @@ var _hit_list: Array[Node] = []
 var _buffer_light := 0.0
 var _buffer_heavy := 0.0
 var _drawing := false
+var _block_time := 0.0
+var is_blocking: bool:
+	get:
+		return state == State.BLOCK
 
 var _bow_back: Node3D
 var _bow_hand: Node3D
@@ -122,6 +130,8 @@ func _physics_process(delta: float) -> void:
 			_attack_tick(delta)
 		State.HURT:
 			_hurt(delta)
+		State.BLOCK:
+			_block(delta)
 		State.DEAD:
 			velocity.x = 0.0
 			velocity.z = 0.0
@@ -179,6 +189,11 @@ func _normal(delta: float) -> void:
 		_try_mount_horse()
 	elif Input.is_action_just_pressed("whistle"):
 		_whistle_horse()
+
+	if Input.is_action_pressed("block") and not aiming and is_on_floor() and stamina >= 1.0:
+		_cancel_bow()
+		_start_block()
+		return
 
 	if aiming:
 		_bow(delta)
@@ -471,6 +486,93 @@ func _update_swing(windup: float, active: float, recover: float) -> void:
 		weapon.rotation_degrees = end.lerp(Vector3.ZERO, t)
 
 
+# ---------------------------------------------------------------- Blok va parry
+
+func _start_block() -> void:
+	state = State.BLOCK
+	_block_time = 0.0
+	_face(_cam_forward(), 1.0 / 60.0, true)
+
+
+func _block(delta: float) -> void:
+	_block_time += delta
+	_face(_cam_forward(), delta, true)
+	velocity.x = move_toward(velocity.x, 0.0, 40.0 * delta)
+	velocity.z = move_toward(velocity.z, 0.0, 40.0 * delta)
+	velocity.y -= gravity * delta
+	model.scale = Vector3(1.0, 0.92, 1.0) if _block_time > PARRY_WINDOW else Vector3(1.05, 0.96, 1.05)
+	# Blokdan qochish
+	if Input.is_action_just_pressed("dodge") and stamina >= dodge_cost and is_on_floor():
+		_end_block()
+		var di := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+		var dd := Vector3(di.x, 0.0, di.y).rotated(Vector3.UP, rig.yaw)
+		_start_dodge(dd if dd.length() > 0.1 else -_cam_forward())
+		return
+	if not Input.is_action_pressed("block") or stamina < 1.0 or not is_on_floor():
+		_end_block()
+
+
+func _end_block() -> void:
+	if state == State.BLOCK:
+		state = State.NORMAL
+	model.scale = Vector3.ONE
+
+
+## Zarba old tomondan kelganmi (himoya burchagi ichida)
+func _covers(from_pos: Vector3) -> bool:
+	var to := from_pos - global_position
+	to.y = 0.0
+	if to.length() < 0.05:
+		return true
+	var facing := Vector3(-sin(model.rotation.y), 0.0, -cos(model.rotation.y))
+	return facing.angle_to(to) <= deg_to_rad(BLOCK_ARC_DEG * 0.5)
+
+
+## Blok/parry hisobga olingandan keyin o'yinchiga o'tadigan zarar miqdori.
+func _try_block(amount: float, from_pos: Vector3) -> float:
+	if state != State.BLOCK or not _covers(from_pos):
+		return amount
+	var spark_pos := global_position + Vector3(0, 1.1, 0) + (from_pos - global_position).normalized() * 0.6
+	if _block_time <= PARRY_WINDOW:
+		# Mukammal parry: zarar yo'q, hujum qilgan dushman larzaga tushadi
+		FX.hit_stop(0.12)
+		FX.sparks(spark_pos, Vector3.UP, Color(0.5, 0.9, 1.0), 22)
+		FX.popup(global_position + Vector3.UP * 2.3, 0.0, Color(0.5, 0.9, 1.0))
+		Audio.play_heavy_hit()
+		rig.shake(0.2)
+		stamina = minf(stamina + 15.0, max_stamina)
+		stamina_changed.emit(stamina, max_stamina)
+		_stagger_attacker(from_pos)
+		return 0.0
+	var cost := amount * BLOCK_STAMINA_MULT
+	FX.hit_stop(0.05)
+	FX.sparks(spark_pos, Vector3.UP, Color(1.0, 0.9, 0.6), 10)
+	Audio.play_hit()
+	rig.shake(0.15)
+	if stamina >= cost:
+		_use_stamina(cost)
+		return 0.0  # Kuch yetarli: zarar to'liq to'sildi
+	# Himoya sinishi: kuch tugaydi, zarar qisman o'tadi
+	var leftover := amount * (1.0 - stamina / maxf(cost, 0.01)) + amount * BLOCK_REDUCTION
+	_use_stamina(stamina)
+	_end_block()
+	return minf(leftover, amount)
+
+
+func _stagger_attacker(from_pos: Vector3) -> void:
+	var best: Node = null
+	var best_d := 3.0
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(e) or not e.has_method("get_parried"):
+			continue
+		var d: float = e.global_position.distance_to(from_pos)
+		if d < best_d:
+			best_d = d
+			best = e
+	if best:
+		best.get_parried(global_position)
+
+
 # ---------------------------------------------------------------- Qochish
 
 func _start_dodge(dir: Vector3) -> void:
@@ -503,13 +605,17 @@ func _dodge(delta: float) -> void:
 func take_damage(amount: float, from_pos: Vector3, knockback := 5.0) -> void:
 	if invulnerable or state == State.DEAD:
 		return
+	amount = _try_block(amount, from_pos)
+	if amount <= 0.0:
+		return
 	health = maxf(health - amount, 0.0)
 	health_changed.emit(health, max_health)
 	FX.hit_stop(0.05)
 	rig.shake(0.35)
 	_cancel_bow()
 	_end_attack()
-	model.scale.y = 1.0
+	_end_block()
+	model.scale = Vector3.ONE
 	_dodge_invuln = false
 	if health <= 0.0:
 		_die()
