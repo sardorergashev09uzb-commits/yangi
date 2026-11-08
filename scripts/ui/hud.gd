@@ -81,7 +81,7 @@ func _ready() -> void:
 	var help := Label.new()
 	help.position = Vector2(30, 92)
 	help.text = "WASD - yurish | Sichqoncha - kamera | TAB - doston & ko'nikmalar | E - suhbatlashish | F - Boychibor | H - hushtak\n" \
-			+ "Ot ustida Shift - shiddatli galop (16 m/s) va toptash | Space - qochish | X - sakrash | Q - blok (parry: zarbadan oldin) | F5/F9 - saqlash/yuklash | O'ng tugma - kamon\n" \
+			+ "Ot ustida Shift - shiddatli galop (16 m/s) va toptash | Space - qochish | X - sakrash | Q - blok | C - Alp Gumburi (Super zarba) | F5/F9 - saqlash/yuklash | O'ng tugma - kamon\n" \
 			+ "Sharqda: O'tov, Qultoy Cho'pon va Dev | Shimolda: Surxayil Arenasi | T - qayta boshlash"
 	add_child(help)
 

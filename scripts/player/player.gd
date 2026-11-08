@@ -7,7 +7,7 @@ signal health_changed(current: float, maximum: float)
 signal died
 signal respawned
 
-enum State { NORMAL, DODGE, ATTACK, HURT, DEAD, BLOCK }
+enum State { NORMAL, DODGE, ATTACK, HURT, DEAD, BLOCK, SPECIAL }
 
 # Jang ma'lumotlari: vaqtlar soniyada. swing: 0 - chapga, 1 - o'ngga, 2 - tepadan pastga
 const LIGHT_COMBO := [
@@ -18,6 +18,8 @@ const LIGHT_COMBO := [
 const HEAVY := {"damage": 50.0, "windup": 0.38, "active": 0.16, "recover": 0.48, "lunge": 5.0, "swing": 2, "cost": 25.0}
 const BOW_DRAW_TIME := 0.8
 const BOW_COST := 8.0
+const SPECIAL_STAMINA_COST := 35.0
+const SPECIAL_COOLDOWN := 4.5
 const PARRY_WINDOW := 0.2      # Blok boshlanishidan keyingi "parry" oynasi (soniya)
 const BLOCK_REDUCTION := 0.25  # Blokda o'tadigan zarar ulushi
 const BLOCK_STAMINA_MULT := 0.9
@@ -76,6 +78,8 @@ var _hit_list: Array[Node] = []
 var _buffer_light := 0.0
 var _buffer_heavy := 0.0
 var _drawing := false
+var _special_cooldown_timer := 0.0
+var _special_windup_timer := 0.0
 var _block_time := 0.0
 var is_blocking: bool:
 	get:
@@ -139,6 +143,8 @@ func _physics_process(delta: float) -> void:
 			_hurt(delta)
 		State.BLOCK:
 			_block(delta)
+		State.SPECIAL:
+			_special_tick(delta)
 		State.DEAD:
 			velocity.x = 0.0
 			velocity.z = 0.0
@@ -200,6 +206,13 @@ func _normal(delta: float) -> void:
 	if Input.is_action_pressed("block") and not aiming and is_on_floor() and stamina >= 1.0:
 		_cancel_bow()
 		_start_block()
+		return
+
+	_special_cooldown_timer = maxf(_special_cooldown_timer - delta, 0.0)
+
+	# 13-bosqich: Maxsus qobiliyat - Alp Gumburi [ C ]
+	if Input.is_action_just_pressed("skill_special") and not aiming and is_on_floor() 			and stamina >= SPECIAL_STAMINA_COST and _special_cooldown_timer <= 0.0:
+		_start_special_earthquake()
 		return
 
 	if aiming:
@@ -730,3 +743,44 @@ func _whistle_horse() -> void:
 			h.call_horse(self)
 			return
 
+
+# ---------------------------------------------------------------- Maxsus mahorat (Alp Gumburi)
+
+func _start_special_earthquake() -> void:
+	state = State.SPECIAL
+	_special_windup_timer = 0.35
+	_special_cooldown_timer = SPECIAL_COOLDOWN
+	_use_stamina(SPECIAL_STAMINA_COST)
+	velocity.y = 5.0 # Havoga sakraydi
+	Audio.play_jump()
+
+
+func _special_tick(delta: float) -> void:
+	_special_windup_timer -= delta
+	velocity.x = move_toward(velocity.x, 0.0, 25.0 * delta)
+	velocity.z = move_toward(velocity.z, 0.0, 25.0 * delta)
+	velocity.y -= gravity * delta
+
+	# Sakrab yerga tushganda yoki windup tugaganda portlash
+	if _special_windup_timer <= 0.0:
+		_execute_earthquake()
+		state = State.NORMAL
+
+
+func _execute_earthquake() -> void:
+	velocity = Vector3.ZERO
+	Audio.play_boss_slam()
+	FX.camera_shake(0.45)
+	FX.hit_stop(0.08)
+	FX.dust(global_position, 16, 1.4)
+	FX.impact_burst(global_position + Vector3.UP * 0.2, Color(1.0, 0.8, 0.2), 24)
+
+	var quake := AlpEarthquake.new()
+	var dmg := 45.0 * GameSettings.get_mult("player_dmg")
+	var prog = get_tree().get_first_node_in_group("progression")
+	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("alp_earthquake", false):
+		dmg *= 1.5 # Agar ko'nikma ochilgan bo'lsa +50% zarar va kengroq to'lqin
+		quake.max_radius = 12.0
+	quake.damage = dmg
+	quake.global_position = global_position
+	get_tree().current_scene.add_child(quake)

@@ -17,7 +17,8 @@ var unlocked_skills: Dictionary = {
 	"stamina_flow": false,    # Qo'ng'irot Shiddati: Stamina +30 va tez tiklanish
 	"sword_mastery": false,   # Po'lat Qilich: Qilich zarari +35%
 	"bow_mastery": false,     # Merganlik: Kamon tezroq tortiladi va +40% zarar
-	"horse_trample": false    # Tulpor Shiddati: Boychibor dushmanlarni bosib o'tadi
+	"horse_trample": false,    # Tulpor Shiddati: Boychibor dushmanlarni bosib o'tadi
+	"alp_earthquake": false   # Alp Gumburi: C super zarbasi kuchayadi
 }
 
 var skill_info: Dictionary = {
@@ -45,6 +46,11 @@ var skill_info: Dictionary = {
 		"name": "Boychibor Shiddati",
 		"desc": "Boychibor chopganda dushmanlarni urib yiqitadi va ezadi",
 		"cost": 1
+	},
+	"alp_earthquake": {
+		"name": "Alp Gumburi (Yer tebranishi)",
+		"desc": "C tugmasidagi maxsus qobiliyat zarari +50% va to'lqin radiusi 12 metrga kengayadi",
+		"cost": 2
 	}
 }
 
