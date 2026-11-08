@@ -143,6 +143,9 @@ func _sync_world(qs: Node) -> void:
 			boss.queue_free()
 		if arena.has_method("_on_boss_defeated"):
 			arena._on_boss_defeated()
+		var dgate = arena.get("_dungeon_gate")
+		if dgate and is_instance_valid(dgate) and dgate.has_method("unlock"):
+			dgate.unlock()
 	if qs.is_quest_completed("giant"):
 		var giant = arena.get("_giant")
 		if giant and is_instance_valid(giant):

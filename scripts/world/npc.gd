@@ -2,7 +2,7 @@ class_name NPC
 extends CharacterBody3D
 ## Doston qahramonlari NPC: Qultoy Cho'pon, Barchinoy va Karajon.
 
-enum CharacterType { QULTOY, BARCHIN }
+enum CharacterType { QULTOY, BARCHIN, KARAJON }
 
 @export var character_type := CharacterType.QULTOY
 @export var character_name := "Qultoy Cho'pon"
@@ -32,9 +32,13 @@ func _build_visuals() -> void:
 	if character_type == CharacterType.QULTOY:
 		# Qultoy to'ni (Yashil-ko'k to'n)
 		bmat.albedo_color = Color(0.2, 0.38, 0.3)
-	else:
-		# Barchinoy atlas ko'ylagi (Qizil-binafsha)
-		bmat.albedo_color = Color(0.7, 0.2, 0.45)
+	elif character_type == CharacterType.BARCHIN:
+		# Barchinoy atlas ko'ylagi (Zarbof to'q qizil)
+		bmat.albedo_color = Color(0.8, 0.15, 0.35)
+	elif character_type == CharacterType.KARAJON:
+		# Karajon Alp sovuti (Qora po'lat va oltin kamar)
+		bmat.albedo_color = Color(0.18, 0.18, 0.22)
+		bmat.metallic = 0.8
 
 	cyl.material = bmat
 	body_mi.mesh = cyl
@@ -121,38 +125,29 @@ func interact() -> void:
 	if character_type == CharacterType.QULTOY:
 		if not _talked_once:
 			lines = [
-				{
-					"speaker": "Qultoy Cho'pon",
-					"text": "Assalomu alaykum, botirim Hakimbek! Ko'zimga o't tushsin, naqadar ulug' pahlavon bo'lib voyaga yetibsan!"
-				},
-				{
-					"speaker": "Qultoy Cho'pon",
-					"text": "Eshitdingmi, amaking Boysari o'n ming uyli el bilan Qalmoq yurtiga ketgan edi. U yerda go'zal Barchinoy qizimiz boshiga musibat tushibdi!"
-				},
-				{
-					"speaker": "Qultoy Cho'pon",
-					"text": "Qalmoq podshohi va to'rt alpi Barchinni zo'rlik bilan olmoqchi. Lekin qizimiz: 'Menga teng bo'lsa, Boysundan Hakimbek kelsin, 14 botmon kamonimni tortsin, Boychiborni poygada o'zdirsin!' deb shart qo'ydi."
-				},
-				{
-					"speaker": "Alpamish (Tanlov)",
-					"text": "Qultoy ota, bu xabarni eshitib yuragim o'rtandi...",
-					"choices": [
-						"Adolat va ehtirom: 'Barchinoyning sha'nini saqlayman, elga tinchlik olib kelaman!'",
-						"Jangovar shiddat: 'Qalmoq alplari haddidan oshibdi! Yoyim va qilichim bilan ularni yakson qilaman!'"
-					]
-				},
-				{
-					"speaker": "Qultoy Cho'pon",
-					"text": "Omin, xudo yo'lingni ochsin! Boychibor tulporing o'tov yonida shay turibdi. Avval uni minib dasht bo'ylab sinab ko'r, so'ng Shimoliy Qal'a sari yo'l ol!"
-				}
+				{"speaker": "Qultoy Cho'pon", "text": "Assalomu alaykum, botirim Hakimbek! Ko'zimga o't tushsin, naqadar ulug' pahlavon bo'lib voyaga yetibsan!"},
+				{"speaker": "Qultoy Cho'pon", "text": "Eshitdingmi, amaking Boysari o'n ming uyli el bilan Qalmoq yurtiga ketgan edi. U yerda go'zal Barchinoy qizimiz boshiga musibat tushibdi!"},
+				{"speaker": "Qultoy Cho'pon", "text": "Qalmoq podshohi va to'rt alpi Barchinni zo'rlik bilan olmoqchi. Lekin qizimiz: 'Menga teng bo'lsa, Boysundan Hakimbek kelsin, 14 botmon kamonimni tortsin!' deb shart qo'ydi."},
+				{"speaker": "Alpamish (Tanlov)", "text": "Qultoy ota, bu xabarni eshitib yuragim o'rtandi...", "choices": ["Adolat: 'Barchinoy sha'nini asrayman!'", "Jang: 'Qalmoq alplarini tor-mor qilaman!'"]},
+				{"speaker": "Qultoy Cho'pon", "text": "Omin! Boychibor shay. Dashtdagi Dev va Shimoliy arenadagi Surxayil Alpni yengib, Zindonga yo'l ol!"}
 			]
 		else:
-			lines = [
-				{
-					"speaker": "Qultoy Cho'pon",
-					"text": "Harakat qil, botirim! Boychiborga minib, dashtdagi Qoyali Dev va Shimoldagi Surxayil darvozasini och!"
-				}
-			]
+			lines = [{"speaker": "Qultoy Cho'pon", "text": "Harakat qil, botirim! Surxayil Alp mag'lub bo'lgach, Qalmoq Zindoni darvozasi ochiladi!"}]
+
+	elif character_type == CharacterType.BARCHIN:
+		lines = [
+			{"speaker": "Barchinoy", "text": "Hakimbek! Jonim pahlavoni! Bilardim, va'dangda turib Boysundan meni izlab kelishingni bilardim!"},
+			{"speaker": "Barchinoy", "text": "Surxayil va Qalmoq lashkarlari meni bu qorong'u zindonga bandi qilgan edi. Sen kelib Qo'ng'irot sha'nini tiklading!"},
+			{"speaker": "Alpamish (Tanlov)", "text": "Barchinim, endi xavf ortda qoldi!", "choices": ["'El-yurtimiz Boysunga qaytamiz, to'y tomosha qilamiz!'", "'Qalmoq eli bilan abadiy sulh va do'stlik tuzamiz!'"]},
+			{"speaker": "Barchinoy", "text": "Karajon botir ham biz tomonga o'tdi. Endi Boysun eli tinch va omon bo'lsin!"}
+		]
+
+	elif character_type == CharacterType.KARAJON:
+		lines = [
+			{"speaker": "Karajon Botir", "text": "Alp Alpomish! Men Karajonman — Qalmoq alpi edim, lekin sening mardliging va kuchingni ko'rib qoyil qoldim!"},
+			{"speaker": "Karajon Botir", "text": "Surxayil kabi nohaqlik tarafdori emasman. Men sen bilan qiyomatli do'st (qon qardosh) bo'lishga qasamyod qilaman!"},
+			{"speaker": "Alpamish", "text": "Do'stlik qo'lini cho'zgan mardga Alpomishning quchog'i hamisha ochiq, Karajon birodar!"}
+		]
 
 	if not dbox.dialog_finished.is_connected(_on_dialog_done):
 		dbox.dialog_finished.connect(_on_dialog_done, CONNECT_ONE_SHOT)
@@ -164,4 +159,9 @@ func _on_dialog_done(choice_index: int) -> void:
 	_talked_once = true
 	var qsystem = get_tree().get_first_node_in_group("quest_system")
 	if qsystem and qsystem.has_method("complete_quest"):
-		qsystem.complete_quest("qultoy")
+		if character_type == CharacterType.QULTOY:
+			qsystem.complete_quest("qultoy")
+		elif character_type == CharacterType.BARCHIN:
+			qsystem.complete_quest("rescue_barchin")
+		elif character_type == CharacterType.KARAJON:
+			qsystem.complete_quest("karajon_oath")

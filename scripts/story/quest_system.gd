@@ -38,6 +38,22 @@ var quests: Dictionary = {
 		"hint": "Shimoliy arenadagi botirni yengish",
 		"completed": false,
 		"xp": 150
+	},
+	"karajon_oath": {
+		"id": "karajon_oath",
+		"title": "Karajon bilan qardoshlik",
+		"desc": "Qalmoq Zindoniga kirib, Karajon Botir bilan do'stlik ahdini bog'lash [ E ]",
+		"hint": "Zindonda Karajon bilan suhbatlashish",
+		"completed": false,
+		"xp": 120
+	},
+	"rescue_barchin": {
+		"id": "rescue_barchin",
+		"title": "Barchinoyni ozod etish",
+		"desc": "Zindon ichida bandi bo'lgan go'zal Barchinoyni qutqarish [ E ]",
+		"hint": "Barchinoyni zindondan ozod qilish",
+		"completed": false,
+		"xp": 200
 	}
 }
 
@@ -48,7 +64,7 @@ func _ready() -> void:
 
 func get_all_quests() -> Array[Dictionary]:
 	var list: Array[Dictionary] = []
-	for qid in ["qultoy", "boychibor", "giant", "boss"]:
+	for qid in ["qultoy", "boychibor", "giant", "boss", "karajon_oath", "rescue_barchin"]:
 		if quests.has(qid):
 			list.append(quests[qid])
 	return list
@@ -56,7 +72,7 @@ func get_all_quests() -> Array[Dictionary]:
 
 func get_active_quest() -> Dictionary:
 	# Bajarilmagan birinchi vazifa (eski interfeyslar mosligi uchun)
-	for qid in ["qultoy", "boychibor", "giant", "boss"]:
+	for qid in ["qultoy", "boychibor", "giant", "boss", "karajon_oath", "rescue_barchin"]:
 		if quests.has(qid) and not quests[qid].completed:
 			return quests[qid]
 	return {}

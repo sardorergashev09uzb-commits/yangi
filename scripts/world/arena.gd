@@ -13,9 +13,13 @@ const DialogBoxScript = preload("res://scripts/story/dialog_box.gd")
 const QuestSystemScript = preload("res://scripts/story/quest_system.gd")
 const ProgressionScript = preload("res://scripts/player/progression.gd")
 const PauseMenuScript = preload("res://scripts/ui/pause_menu.gd")
+const DungeonGateScript = preload("res://scripts/world/dungeon_gate.gd")
+const DungeonAreaScript = preload("res://scripts/world/dungeon_area.gd")
 const MainMenuScript = preload("res://scripts/ui/main_menu.gd")
 
 var _boss: CharacterBody3D
+var _dungeon_gate: DungeonGate
+var _dungeon_area: DungeonArea
 var _arena_gate: StaticBody3D
 var _fight_started := false
 var _boss_defeated_flag := false
@@ -300,6 +304,17 @@ func _build_boss_arena() -> void:
 	# Darvozani tushirish uchun ichki tosh richag (qamalib qolmaslik uchun)
 	_build_gate_lever(arena_center + Vector3(7.5, 0.0, 21.0))
 
+	# 11-bosqich: Shimoliy devor ortidagi Qalmoq Zindoni Darvozasi
+	_dungeon_gate = DungeonGateScript.new()
+	_dungeon_gate.position = arena_center + Vector3(0, 0, -23)
+	add_child(_dungeon_gate)
+	_dungeon_gate.portal_entered.connect(_on_dungeon_portal_entered)
+
+	# Zindon ichki maydoni (Shimolda, Z = -150 da alohida qal'a)
+	_dungeon_area = DungeonAreaScript.new()
+	_dungeon_area.position = Vector3(0, 0, -150)
+	add_child(_dungeon_area)
+
 
 func _build_gate_lever(pos: Vector3) -> void:
 	var pillar := _box(pos, Vector3(0.6, 1.1, 0.6), Color(0.42, 0.38, 0.32))
@@ -356,6 +371,11 @@ func _on_boss_defeated() -> void:
 	if _arena_gate:
 		var t := create_tween()
 		t.tween_property(_arena_gate, "position:y", -6.0, 1.2)
+	if _dungeon_gate and is_instance_valid(_dungeon_gate):
+		_dungeon_gate.unlock()
+	var qsys = get_tree().get_first_node_in_group("quest_system")
+	if qsys and qsys.has_method("emit_signal"):
+		qsys.banner_requested.emit("ZINDON DARVOZASI OCHILDI!", "Shimoldagi portal orqali Barchinoy va Karajon huzuriga o'ting!")
 
 
 func _pillar(pos: Vector3) -> void:
@@ -470,3 +490,12 @@ func _tree(pos: Vector3, h := 4.0) -> void:
 	crown.position.y = h + 0.6
 	trunk.add_child(crown)
 	add_child(trunk)
+
+func _on_dungeon_portal_entered() -> void:
+	var player = get_tree().get_first_node_in_group("player")
+	if player and is_instance_valid(player):
+		# Zindon ichiga teleportatsiya (Z = -135)
+		player.global_position = Vector3(0, 0.2, -135)
+		player.velocity = Vector3.ZERO
+		Audio.play_level_up()
+		FX.popup(player.global_position + Vector3.UP * 2.5, 0.0, Color(0.9, 0.2, 0.5))
