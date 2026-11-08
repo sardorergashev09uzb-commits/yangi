@@ -17,6 +17,8 @@ const PauseMenuScript = preload("res://scripts/ui/pause_menu.gd")
 var _boss: CharacterBody3D
 var _arena_gate: StaticBody3D
 var _fight_started := false
+var _boss_defeated_flag := false
+var _lever_label: Label3D
 var _boss_spawn := Vector3(0, 0, -90)
 var _enemy_spawns: Array[Dictionary] = []
 
@@ -290,9 +292,50 @@ func _build_boss_arena() -> void:
 	trigger.body_entered.connect(_on_player_entered_arena)
 	add_child(trigger)
 
+	# Darvozani tushirish uchun ichki tosh richag (qamalib qolmaslik uchun)
+	_build_gate_lever(arena_center + Vector3(7.5, 0.0, 21.0))
+
+
+func _build_gate_lever(pos: Vector3) -> void:
+	var pillar := _box(pos, Vector3(0.6, 1.1, 0.6), Color(0.42, 0.38, 0.32))
+	_lever_label = Label3D.new()
+	_lever_label.text = "[ E ] - Darvozani tushirish"
+	_lever_label.font_size = 32
+	_lever_label.modulate = Color(1.0, 0.85, 0.25)
+	_lever_label.position = Vector3(0, 1.4, 0)
+	_lever_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_lever_label.no_depth_test = true
+	_lever_label.visible = false
+	pillar.add_child(_lever_label)
+
+
+func _process(_delta: float) -> void:
+	# Agar boss o'lgan bo'lsa, darvoza doimo ochiq qoladi
+	if _boss_defeated_flag and _arena_gate and _arena_gate.position.y > -5.0:
+		_arena_gate.position.y = -6.0
+
+	# Darvoza oldidagi richag bilan o'zaro ta'sir (E)
+	var player = get_tree().get_first_node_in_group("player")
+	if player and _lever_label and is_instance_valid(_lever_label):
+		var d: float = player.global_position.distance_to(_lever_label.global_position)
+		_lever_label.visible = d < 4.0 and _arena_gate and _arena_gate.position.y > -4.0
+		if d < 4.0 and Input.is_action_just_pressed("interact"):
+			_open_gate()
+
+
+func _open_gate() -> void:
+	if _arena_gate:
+		var t := create_tween()
+		t.tween_property(_arena_gate, "position:y", -6.0, 0.8)
+		if _lever_label:
+			_lever_label.visible = false
+
 
 func _on_player_entered_arena(body: Node3D) -> void:
-	if _fight_started or not body.is_in_group("player") or (_boss and _boss.get("state") == 6): # State.DEAD = 6
+	# Agar boss tashqaridan otib o'ldirilgan bo'lsa, yoki allqachon o'lgan bo'lsa (State.DEAD = 7), darvoza yopilmaydi!
+	if _boss_defeated_flag or _fight_started or not body.is_in_group("player"):
+		return
+	if _boss == null or not is_instance_valid(_boss) or _boss.get("state") == 7: # State.DEAD = 7
 		return
 	_fight_started = true
 	if _boss and _boss.has_method("activate"):
@@ -303,8 +346,11 @@ func _on_player_entered_arena(body: Node3D) -> void:
 
 
 func _on_boss_defeated() -> void:
-	var t := create_tween()
-	t.tween_property(_arena_gate, "position:y", -6.0, 1.2)
+	_boss_defeated_flag = true
+	_fight_started = false
+	if _arena_gate:
+		var t := create_tween()
+		t.tween_property(_arena_gate, "position:y", -6.0, 1.2)
 
 
 func _pillar(pos: Vector3) -> void:
