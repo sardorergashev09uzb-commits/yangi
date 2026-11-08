@@ -19,8 +19,8 @@ const DayNightCycleScript = preload("res://scripts/world/day_night_cycle.gd")
 const MainMenuScript = preload("res://scripts/ui/main_menu.gd")
 
 var _boss: CharacterBody3D
-var _dungeon_gate: DungeonGate
-var _dungeon_area: DungeonArea
+var _dungeon_gate: StaticBody3D
+var _dungeon_area: Node3D
 var _arena_gate: StaticBody3D
 var _fight_started := false
 var _boss_defeated_flag := false
