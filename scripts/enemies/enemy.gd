@@ -47,6 +47,9 @@ var _has_token := false
 var _struck := false
 var _strafe_sign := 1.0
 var _lock_facing := false
+var _avoid_sign := 1.0   # To'siqni qaysi tomondan aylanib o'tish (eslab qolinadi)
+var _avoid_timer := 0.0
+var _avoid_dir := Vector3.ZERO
 var _body: MeshInstance3D
 var _mat: StandardMaterial3D
 var _weapon: Node3D
@@ -218,6 +221,7 @@ func _chase(dir: Vector3, dist: float, delta: float) -> void:
 				move = -dir * speed * 0.6 + side * speed * 0.4
 			else:
 				move = side * speed * 0.55
+	move = _avoid_obstacles(move, delta)
 	move += _separation() * 2.0
 	velocity.x = move_toward(velocity.x, move.x, 30.0 * delta)
 	velocity.z = move_toward(velocity.z, move.z, 30.0 * delta)
@@ -253,6 +257,40 @@ func _can_see_player() -> bool:
 	var to := _player.global_position + Vector3.UP * 1.2
 	var q := PhysicsRayQueryParameters3D.create(from, to, 1, [get_rid()])
 	return get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+
+## To'siqdan qochish: dushmanning o'z tanasi bilan yo'nalishni sinaydi. To'siq bo'lsa,
+## bo'sh yo'nalishni tanlaydi va uni biroz vaqt ushlab turadi (to'siq oldida titrab qolmaslik uchun).
+func _avoid_obstacles(move: Vector3, delta: float) -> Vector3:
+	var flat := Vector3(move.x, 0.0, move.z)
+	var spd := flat.length()
+	if spd < 0.1:
+		return move
+	_avoid_timer = maxf(_avoid_timer - delta, 0.0)
+	# Tanlangan aylanib o'tish yo'nalishi hali kuchda va bo'sh bo'lsa, davom etamiz
+	if _avoid_timer > 0.0 and _avoid_dir.length() > 0.1 and _path_clear(_avoid_dir):
+		return _avoid_dir * spd + Vector3(0.0, move.y, 0.0)
+	var dir := flat / spd
+	if _path_clear(dir):
+		return move
+	for a: float in [35.0, 70.0, 110.0, 150.0]:
+		for sgn: float in [_avoid_sign, -_avoid_sign]:
+			var cand := dir.rotated(Vector3.UP, deg_to_rad(a) * sgn)
+			if _path_clear(cand):
+				_avoid_sign = sgn
+				_avoid_dir = cand
+				_avoid_timer = 0.9
+				return cand * spd + Vector3(0.0, move.y, 0.0)
+	return move
+
+
+func _path_clear(dir: Vector3) -> bool:
+	# Dushmanning o'z tanasi bilan sinab ko'ramiz (balandlikdagi to'siqlar ham hisobga olinadi)
+	var col := KinematicCollision3D.new()
+	if not test_move(global_transform, dir * 1.0, col):
+		return true
+	# Yurish mumkin bo'lgan qiyalik (rampa, yer) to'siq emas
+	return col.get_normal().y > 0.7
 
 
 # ---------------------------------------------------------------- Hujum tokeni
