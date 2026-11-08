@@ -34,8 +34,14 @@ var _xp_bar: ProgressBar
 var _lvl_label: Label
 var _skill_hint: Label
 
+# Kompas / Radar UI elementlari
+var _compass_container: PanelContainer
+var _compass_canvas: Control
+var _compass_info_label: Label
+
 
 func _ready() -> void:
+	_setup_compass_ui()
 	_health_bar = _make_bar(Vector2(30, 24), Vector2(320, 16), Color(0.85, 0.15, 0.15))
 	_stamina_bar = _make_bar(Vector2(30, 44), Vector2(260, 10), Color(0.3, 0.75, 0.3))
 	_xp_bar = _make_bar(Vector2(30, 58), Vector2(200, 8), Color(0.65, 0.35, 0.95))
@@ -347,6 +353,9 @@ func _on_all_quests_completed() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _compass_canvas:
+		_compass_canvas.queue_redraw()
+
 	var enemies_count := get_tree().get_nodes_in_group("enemies").size()
 	_enemy_label.text = "Dushmanlar: %d" % enemies_count
 	if _player == null:
@@ -357,6 +366,145 @@ func _process(_delta: float) -> void:
 	_charge_bar.visible = is_aim and charge > 0.0
 	_charge_bar.max_value = 1.0
 	_charge_bar.value = charge
+
+
+func _setup_compass_ui() -> void:
+	_compass_container = PanelContainer.new()
+	_compass_container.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_compass_container.offset_left = -210
+	_compass_container.offset_right = 210
+	_compass_container.offset_top = 8
+	_compass_container.offset_bottom = 38
+
+	var cstyle := StyleBoxFlat.new()
+	cstyle.bg_color = Color(0.06, 0.05, 0.06, 0.82)
+	cstyle.border_width_left = 1
+	cstyle.border_width_right = 1
+	cstyle.border_width_top = 1
+	cstyle.border_width_bottom = 1
+	cstyle.border_color = Color(0.75, 0.62, 0.28, 0.75)
+	cstyle.corner_radius_top_left = 6
+	cstyle.corner_radius_top_right = 6
+	cstyle.corner_radius_bottom_left = 6
+	cstyle.corner_radius_bottom_right = 6
+	_compass_container.add_theme_stylebox_override("panel", cstyle)
+	add_child(_compass_container)
+
+	_compass_canvas = Control.new()
+	_compass_canvas.custom_minimum_size = Vector2(400, 24)
+	_compass_canvas.clip_contents = true
+	_compass_canvas.draw.connect(_on_compass_draw)
+	_compass_container.add_child(_compass_canvas)
+
+	# Markaziy ko'rsatkich ignasi (Oltin uchburchak)
+	var needle := Label.new()
+	needle.text = "▼"
+	needle.add_theme_font_size_override("font_size", 9)
+	needle.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
+	needle.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	needle.offset_left = -4
+	needle.offset_top = -2
+	_compass_container.add_child(needle)
+
+	# Kompas ostidagi nishon masofasi yozuvi
+	_compass_info_label = Label.new()
+	_compass_info_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_compass_info_label.offset_left = -180
+	_compass_info_label.offset_right = 180
+	_compass_info_label.offset_top = 40
+	_compass_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_compass_info_label.add_theme_font_size_override("font_size", 11)
+	_compass_info_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	add_child(_compass_info_label)
+
+
+func _on_compass_draw() -> void:
+	if _compass_canvas == null:
+		return
+	var font := _compass_canvas.get_theme_default_font()
+	if font == null:
+		font = ThemeDB.fallback_font
+
+	var center_x := 200.0
+	var px_per_rad := 400.0 / deg_to_rad(140.0) # 140 darajali ko'rish burchagi
+
+	var cam := get_viewport().get_camera_3d()
+	var cam_yaw: float = 0.0
+	if cam:
+		cam_yaw = cam.global_rotation.y
+	elif _player and _player.get("rig"):
+		cam_yaw = float(_player.get("rig").yaw)
+
+	# 1. Gorizontal asos chizig'i
+	_compass_canvas.draw_line(Vector2(0, 18), Vector2(400, 18), Color(0.45, 0.4, 0.3, 0.6), 1.0)
+
+	# 2. Tomonlar (Kardinal yo'nalishlar)
+	# Godot 3D koordinatalarda: -Z Shimol (0), +X Sharq (-PI/2), +Z Janub (PI), -X G'arb (PI/2)
+	var cardinals := [
+		[0.0, "SH", Color(1.0, 0.35, 0.35)],             # Shimol (North)
+		[-PI * 0.25, "SH-SH", Color(0.75, 0.75, 0.75)],   # Shimoli-sharq
+		[-PI * 0.5, "SH", Color(0.9, 0.85, 0.4)],         # Sharq (East)
+		[-PI * 0.75, "J-SH", Color(0.75, 0.75, 0.75)],    # Janubi-sharq
+		[PI, "J", Color(0.4, 0.8, 1.0)],                  # Janub (South)
+		[PI * 0.75, "J-G'", Color(0.75, 0.75, 0.75)],     # Janubi-g'arb
+		[PI * 0.5, "G'", Color(0.9, 0.85, 0.4)],          # G'arb (West)
+		[PI * 0.25, "SH-G'", Color(0.75, 0.75, 0.75)],    # Shimoli-g'arb
+	]
+
+	for c in cardinals:
+		var c_ang: float = c[0]
+		var diff := wrapf(c_ang - cam_yaw, -PI, PI)
+		var x := center_x + diff * px_per_rad
+		if x >= 8.0 and x <= 392.0:
+			_compass_canvas.draw_line(Vector2(x, 14), Vector2(x, 18), Color(0.7, 0.65, 0.5), 1.0)
+			_compass_canvas.draw_string(font, Vector2(x - 12, 13), c[1], HORIZONTAL_ALIGNMENT_CENTER, 24, 10, c[2])
+
+	# 3. Asosiy nishonlar (POIs)
+	var p_pos := _player.global_position if _player and is_instance_valid(_player) else Vector3.ZERO
+	var pois := [
+		{"pos": Vector3(18, 0, 16), "name": "O'tov (Qultoy)", "icon": "⛺", "col": Color(1.0, 0.85, 0.3)},
+		{"pos": Vector3(38, 0, 48), "name": "Qoyali Dev", "icon": "⚡", "col": Color(1.0, 0.5, 0.2)},
+		{"pos": Vector3(0, 0, -82), "name": "Surxayil Arenasi", "icon": "⚔", "col": Color(0.95, 0.35, 0.35)},
+		{"pos": Vector3(0, 0, -135), "name": "Qalmoq Zindoni", "icon": "☖", "col": Color(0.85, 0.45, 1.0)},
+	]
+
+	# Boychibor tulpori
+	var horse = get_tree().get_first_node_in_group("horses")
+	if horse and is_instance_valid(horse) and not horse.get("is_mounted"):
+		pois.append({"pos": horse.global_position, "name": "Boychibor", "icon": "🐎", "col": Color(0.35, 1.0, 0.5)})
+
+	var closest_name := ""
+	var closest_dist := 99999.0
+
+	for poi in pois:
+		var pos: Vector3 = poi.pos
+		var d := p_pos.distance_to(pos)
+		if d < closest_dist:
+			closest_dist = d
+			closest_name = poi.name
+
+		var to_poi := pos - p_pos
+		var ang := atan2(to_poi.x, -to_poi.z) # North is -Z
+		var diff := wrapf(ang - cam_yaw, -PI, PI)
+		var x := center_x + diff * px_per_rad
+		if x >= 12.0 and x <= 388.0:
+			_compass_canvas.draw_string(font, Vector2(x - 8, 14), poi.icon, HORIZONTAL_ALIGNMENT_CENTER, 16, 11, poi.col)
+
+	# 4. Yaqin dushmanlar (Qizil radar nuqtalari)
+	for e in get_tree().get_nodes_in_group("enemies"):
+		var e_node := e as Node3D
+		if e_node and is_instance_valid(e_node) and not e_node.is_queued_for_deletion():
+			var d := p_pos.distance_to(e_node.global_position)
+			if d < 35.0:
+				var to_e: Vector3 = e_node.global_position - p_pos
+				var ang := atan2(to_e.x, -to_e.z)
+				var diff := wrapf(ang - cam_yaw, -PI, PI)
+				var x := center_x + diff * px_per_rad
+				if x >= 10.0 and x <= 390.0:
+					_compass_canvas.draw_circle(Vector2(x, 18), 2.5, Color(1.0, 0.2, 0.2, 0.9))
+
+	if closest_name != "" and _compass_info_label:
+		_compass_info_label.text = "[ %s: %dm ]" % [closest_name, int(round(closest_dist))]
 
 
 func _setup_quest_ui() -> void:

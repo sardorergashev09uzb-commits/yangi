@@ -75,8 +75,18 @@ func _build_visuals() -> void:
 
 
 func _update_label() -> void:
-	var blocks := int(ceil(10.0 * health / max_health))
-	_label.text = "Qoyali Dasht Devi\n%s" % ["█".repeat(blocks)]
+	if _label == null or not is_instance_valid(_label):
+		return
+	var pct := clampf(health / max_health, 0.0, 1.0)
+	var total_bars := 16
+	var filled := int(round(pct * total_bars))
+	var empty := total_bars - filled
+	var bar_str := "█".repeat(filled) + "░".repeat(empty)
+	_label.text = "⚡ Qoyali Dasht Devi [ELITA]\n[%s] %d/%d HP" % [bar_str, int(ceil(health)), int(max_health)]
+	if pct > 0.5:
+		_label.modulate = Color(1.0, 0.85, 0.3)
+	else:
+		_label.modulate = Color(1.0, 0.35, 0.25)
 
 
 func _physics_process(delta: float) -> void:
@@ -84,6 +94,12 @@ func _physics_process(delta: float) -> void:
 		_player = get_tree().get_first_node_in_group("player") as CharacterBody3D
 
 	_cooldown -= delta
+
+	if _label and is_instance_valid(_label):
+		if state == State.DEAD:
+			_label.visible = false
+		elif _player and is_instance_valid(_player):
+			_label.visible = global_position.distance_to(_player.global_position) < 35.0
 
 	var player_alive: bool = _player != null and _player.get("state") != 4 # State.DEAD
 	if state == State.DEAD or _player == null or not player_alive:

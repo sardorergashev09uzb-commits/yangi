@@ -48,22 +48,84 @@ func _generate_all_sounds() -> void:
 	_streams["doyra_gum"] = _gen_doyra_gum()
 	_streams["doyra_bak"] = _gen_doyra_bak()
 
+	# Milliy o'zbek do'mbirasi akkord va notalari
+	_streams["dom_d3"] = _gen_dombira(146.83, 0.42) # D3
+	_streams["dom_f3"] = _gen_dombira(174.61, 0.40) # F3
+	_streams["dom_g3"] = _gen_dombira(196.00, 0.40) # G3
+	_streams["dom_a3"] = _gen_dombira(220.00, 0.38) # A3
+	_streams["dom_c4"] = _gen_dombira(261.63, 0.36) # C4
+	_streams["dom_d4"] = _gen_dombira(293.66, 0.35) # D4
+	_streams["dom_strum"] = _gen_dombira_strum()
+
+
+enum MusicState { CALM, BATTLE }
+var current_music_state := MusicState.CALM
+var _calm_beat := 0
+var _combat_cooldown := 0.0
+
+const CALM_MELODY := [
+	"dom_d3", "", "dom_g3", "", "dom_a3", "dom_d4", "dom_c4", "",
+	"dom_a3", "", "dom_g3", "", "dom_d3", "", "dom_g3", ""
+]
+
+const BATTLE_MELODY := [
+	"dom_d3", "dom_d3", "dom_g3", "dom_a3", "dom_c4", "dom_d4", "dom_strum", "dom_c4",
+	"dom_a3", "dom_a3", "dom_g3", "dom_f3", "dom_d3", "dom_strum", "dom_d3", ""
+]
+const BATTLE_DOYRA := [1, 0, 2, 2, 1, 0, 2, 1, 1, 0, 2, 2, 1, 2, 2, 0]
+
 
 func _process(delta: float) -> void:
 	if not is_music_enabled or get_tree().paused:
 		return
 
-	# Sharqona jang usuli (ritmik doyra pulsi)
+	# Dushman yaqinligini aniqlash (Jang holatiga avtomatik o'tish)
+	var player = get_tree().get_first_node_in_group("player")
+	var in_combat := false
+	if player and is_instance_valid(player):
+		var p_pos: Vector3 = player.global_position
+		for e in get_tree().get_nodes_in_group("enemies"):
+			if e and is_instance_valid(e) and not e.is_queued_for_deletion():
+				var d: float = p_pos.distance_to(e.global_position)
+				if d < 18.0:
+					in_combat = true
+					break
+
+	if in_combat:
+		_combat_cooldown = 4.0
+		current_music_state = MusicState.BATTLE
+	elif _combat_cooldown > 0.0:
+		_combat_cooldown -= delta
+	else:
+		current_music_state = MusicState.CALM
+
+	# Milliy musiqani ijro etish
 	_music_timer += delta
-	var beat_len := 0.22 # ~136 BPM jangovar shiddat
+	var beat_len := 0.18 if current_music_state == MusicState.BATTLE else 0.36
 	if _music_timer >= beat_len:
 		_music_timer -= beat_len
-		var beat_type: int = USUL_BEATS[_music_beat % USUL_BEATS.size()]
-		_music_beat += 1
-		if beat_type == 1:
-			play_sfx("doyra_gum", randf_range(0.96, 1.04), music_volume_db)
-		elif beat_type == 2:
-			play_sfx("doyra_bak", randf_range(0.95, 1.05), music_volume_db - 3.0)
+		if current_music_state == MusicState.BATTLE:
+			var idx := _music_beat % BATTLE_MELODY.size()
+			_music_beat += 1
+			# Doyra zarbi
+			var doyra_type: int = BATTLE_DOYRA[idx % BATTLE_DOYRA.size()]
+			if doyra_type == 1:
+				play_sfx("doyra_gum", randf_range(0.96, 1.04), music_volume_db + 1.0)
+			elif doyra_type == 2:
+				play_sfx("doyra_bak", randf_range(0.95, 1.05), music_volume_db - 2.0)
+			# Do'mbira kuyi
+			var note_name: String = BATTLE_MELODY[idx]
+			if note_name != "":
+				play_sfx(note_name, randf_range(0.98, 1.02), music_volume_db + 2.0)
+		else:
+			var idx := _calm_beat % CALM_MELODY.size()
+			_calm_beat += 1
+			# Dasht nafasi: mayin do'mbira va vaqti-vaqti bilan mayin doyra
+			if idx % 8 == 0:
+				play_sfx("doyra_gum", 0.9, music_volume_db - 6.0)
+			var note_name: String = CALM_MELODY[idx]
+			if note_name != "":
+				play_sfx(note_name, randf_range(0.98, 1.02), music_volume_db)
 
 
 # ---------------------------------------------------------------- Ijro usullari
@@ -356,3 +418,63 @@ func _gen_arpeggio(notes: Array, note_dur: float) -> AudioStreamWAV:
 		bytes.encode_s16(i * 2, val)
 
 	return _create_wav(bytes, rate)
+
+
+func _gen_dombira(freq: float, dur: float) -> AudioStreamWAV:
+	var rate := 22050
+	var samples := int(rate * dur)
+	var bytes := PackedByteArray()
+	bytes.resize(samples * 2)
+
+	for i in range(samples):
+		var t := float(i) / rate
+		# Tirnoq zarbasi (attack click)
+		var attack_env := exp(-t * 85.0) * 0.45
+		var click := randf_range(-1.0, 1.0) * attack_env
+
+		# Sim tebranishi va garmonikalar (Asosiy, 2- va 3-garmonika)
+		var decay := exp(-t * 8.5)
+		var h1 := sin(TAU * freq * t) * 0.65
+		var h2 := sin(TAU * freq * 2.0 * t) * 0.32 * exp(-t * 14.0)
+		var h3 := sin(TAU * freq * 3.0 * t) * 0.18 * exp(-t * 22.0)
+
+		# Qorin rezonansi (yog'och kosaning bo'g'iq tovushi)
+		var body_res := sin(TAU * 220.0 * t) * 0.12 * exp(-t * 12.0)
+
+		var s := (h1 + h2 + h3 + click + body_res) * decay
+		var val := int(clampf(s, -1.0, 1.0) * 26000)
+		bytes.encode_s16(i * 2, val)
+
+	return _create_wav(bytes, rate)
+
+
+func _gen_dombira_strum() -> AudioStreamWAV:
+	var rate := 22050
+	var dur := 0.48
+	var samples := int(rate * dur)
+	var bytes := PackedByteArray()
+	bytes.resize(samples * 2)
+
+	var f1 := 146.83 # D3
+	var f2 := 196.00 # G3
+	var f3 := 293.66 # D4
+
+	for i in range(samples):
+		var t := float(i) / rate
+		var decay := exp(-t * 7.5)
+		# Ketma-ket silkinish (12ms oraliq bilan zarb)
+		var t1 := t
+		var t2 := maxf(t - 0.012, 0.0)
+		var t3 := maxf(t - 0.024, 0.0)
+
+		var s1 := sin(TAU * f1 * t1) * 0.45 * exp(-t1 * 8.0)
+		var s2 := sin(TAU * f2 * t2) * 0.40 * exp(-t2 * 9.0) if t >= 0.012 else 0.0
+		var s3 := sin(TAU * f3 * t3) * 0.35 * exp(-t3 * 10.0) if t >= 0.024 else 0.0
+		var click := randf_range(-0.35, 0.35) * exp(-t * 60.0)
+
+		var s := (s1 + s2 + s3 + click) * decay
+		var val := int(clampf(s, -1.0, 1.0) * 27000)
+		bytes.encode_s16(i * 2, val)
+
+	return _create_wav(bytes, rate)
+

@@ -114,8 +114,25 @@ func _build_visuals() -> void:
 
 
 func _update_label() -> void:
-	var blocks := int(ceil(10.0 * health / max_health))
-	_label.text = "%s\n%s" % [_stats.name, "█".repeat(blocks)]
+	if _label == null or not is_instance_valid(_label):
+		return
+	var pct := clampf(health / max_health, 0.0, 1.0)
+	var total_bars := 12
+	var filled := int(round(pct * total_bars))
+	var empty := total_bars - filled
+	var bar_str := "█".repeat(filled) + "░".repeat(empty)
+	var icon := "⚔"
+	if kind == Kind.SPEAR:
+		icon = "🗡"
+	elif kind == Kind.ARCHER:
+		icon = "🏹"
+	_label.text = "%s %s\n[%s] %d/%d" % [icon, _stats.name, bar_str, int(ceil(health)), int(max_health)]
+	if pct > 0.6:
+		_label.modulate = Color(0.3, 1.0, 0.45)
+	elif pct > 0.3:
+		_label.modulate = Color(1.0, 0.85, 0.25)
+	else:
+		_label.modulate = Color(1.0, 0.3, 0.3)
 
 
 # ---------------------------------------------------------------- Asosiy sikl
@@ -124,6 +141,13 @@ func _physics_process(delta: float) -> void:
 	if _player == null or not is_instance_valid(_player):
 		_player = get_tree().get_first_node_in_group("player") as Player
 	_cooldown -= delta
+
+	# Masofaga qarab sog'liq panelini ko'rsatish/yashirish (25 metrgacha)
+	if _label and is_instance_valid(_label):
+		if state == State.DEAD:
+			_label.visible = false
+		elif _player and is_instance_valid(_player):
+			_label.visible = global_position.distance_to(_player.global_position) < 25.0
 
 	var player_alive := _player != null and _player.state != Player.State.DEAD
 
