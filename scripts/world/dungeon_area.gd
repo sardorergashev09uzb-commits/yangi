@@ -1,14 +1,26 @@
 class_name DungeonArea
 extends Node3D
-## 11-bosqich: Qalmoq Zindoni ichki maydoni (Chilbir qoyalari, mash'allar,
-## zindon soqchilari va Barchinoy hamda Karajon qahramonlari).
+## 8-bosqich: Qalmoq Zindoni Ko'p Qavatli Arxitekturasi, O'lim Tuzoqlari va Boshqotirmalar.
+## 1-qavat: Qorovullar kazarmasi va zindon dahli;
+## 2-qavat: O'lim Tuzoqlari (Aylanuvchi po'lat tig'lar va qadimiy bosim plitalari);
+## 3-qavat: Taxt Zali, Muallaq Temir Qafas (Barchinoy saqlanadigan joy);
+## Sharqiy Qabr: Nur va Tosh Ko'zgu Boshqotirmasi (Light & Mirror Chamber).
 
 const NPCScript = preload("res://scripts/world/npc.gd")
 const EnemyScript = preload("res://scripts/enemies/enemy.gd")
+const BladeTrapScript = preload("res://scripts/world/blade_trap.gd")
+const PressurePlateScript = preload("res://scripts/world/pressure_plate.gd")
+const SuspendedCageScript = preload("res://scripts/world/suspended_cage.gd")
+const LightMirrorPuzzleScript = preload("res://scripts/world/light_mirror_puzzle.gd")
 
 var barchin: NPC
 var karajon: NPC
 var is_rescued := false
+
+var blade_traps: Array[Area3D] = []
+var pressure_plates: Array[Area3D] = []
+var suspended_cage: Node3D
+var mirror_puzzle: Node3D
 
 
 func _ready() -> void:
@@ -17,37 +29,93 @@ func _ready() -> void:
 
 
 func _build_dungeon() -> void:
-	# Zindon zamin toshi (qora bazalt tosh)
-	_box(Vector3(0, -0.5, 0), Vector3(36, 1.0, 48), Color(0.12, 0.11, 0.12))
+	# 1. Asosiy Zindon Zamin Toshlari (Bazalt plitalar)
+	_box(Vector3(0, -0.5, 0), Vector3(44, 1.0, 56), Color(0.12, 0.11, 0.12))
 
-	# Devorlar (Tosh panjara va zindon qal'asi)
-	_box(Vector3(-18, 4.0, 0), Vector3(1.0, 8.0, 48), Color(0.18, 0.16, 0.18))
-	_box(Vector3(18, 4.0, 0), Vector3(1.0, 8.0, 48), Color(0.18, 0.16, 0.18))
-	# Janubiy kirish darvozasi (Arenadan to'g'ridan-to'g'ri o'tish uchun 14 metrli peshtoq)
-	_box(Vector3(-12.5, 4.0, 24), Vector3(11.0, 8.0, 1.0), Color(0.18, 0.16, 0.18))
-	_box(Vector3(12.5, 4.0, 24), Vector3(11.0, 8.0, 1.0), Color(0.18, 0.16, 0.18))
-	_box(Vector3(0, 6.5, 24), Vector3(14.0, 3.0, 1.0), Color(0.18, 0.16, 0.18))
-	_torch(Vector3(-6.5, 3.5, 23.5))
-	_torch(Vector3(6.5, 3.5, 23.5))
-	_box(Vector3(0, 4.0, -24), Vector3(36, 8.0, 1.0), Color(0.18, 0.16, 0.18))
+	# Sharqiy Boshqotirma Xonasi Zamini
+	_box(Vector3(26, -0.5, 0), Vector3(20, 1.0, 24), Color(0.15, 0.13, 0.14))
 
-	# Shift (Tepadan qorong'u gumbaz)
-	_box(Vector3(0, 8.0, 0), Vector3(36, 0.8, 48), Color(0.08, 0.08, 0.09))
+	# Tashqi Devorlar (Tosh panjara va zindon devorlari)
+	_box(Vector3(-22, 4.0, 0), Vector3(1.0, 8.0, 56), Color(0.18, 0.16, 0.18))
+	_box(Vector3(22, 4.0, 20), Vector3(1.0, 8.0, 16), Color(0.18, 0.16, 0.18))
+	_box(Vector3(22, 4.0, -20), Vector3(1.0, 8.0, 16), Color(0.18, 0.16, 0.18))
+	_box(Vector3(36, 4.0, 0), Vector3(1.0, 8.0, 24), Color(0.18, 0.16, 0.18)) # Sharqiy devor
 
-	# Zindon ustunlari (Zanjirlar bilan)
-	for x in [-8.0, 8.0]:
-		for z in [-12.0, 0.0, 12.0]:
+	# Janubiy kirish darvozasi (Arenadan to'g'ridan-to'g'ri o'tish peshtoqi)
+	_box(Vector3(-14.5, 4.0, 28), Vector3(15.0, 8.0, 1.0), Color(0.18, 0.16, 0.18))
+	_box(Vector3(14.5, 4.0, 28), Vector3(15.0, 8.0, 1.0), Color(0.18, 0.16, 0.18))
+	_box(Vector3(0, 6.5, 28), Vector3(14.0, 3.0, 1.0), Color(0.18, 0.16, 0.18))
+	_torch(Vector3(-6.5, 3.5, 27.5))
+	_torch(Vector3(6.5, 3.5, 27.5))
+
+	# Shimoliy devor
+	_box(Vector3(0, 4.0, -28), Vector3(44, 8.0, 1.0), Color(0.18, 0.16, 0.18))
+
+	# Qorong'u gumbaz shift
+	_box(Vector3(0, 8.0, 0), Vector3(44, 0.8, 56), Color(0.08, 0.08, 0.09))
+	_box(Vector3(26, 8.0, 0), Vector3(20, 0.8, 24), Color(0.08, 0.08, 0.09))
+
+	# Zindon Ustunlari
+	for x in [-12.0, 12.0]:
+		for z in [-18.0, -6.0, 6.0, 18.0]:
 			_pillar(Vector3(x, 0, z))
 
-	# Mash'allar (Qizg'ish olov nuri)
-	_torch(Vector3(-17.2, 3.0, -10.0))
-	_torch(Vector3(17.2, 3.0, -10.0))
-	_torch(Vector3(-17.2, 3.0, 10.0))
-	_torch(Vector3(17.2, 3.0, 10.0))
+	# Mash'allar (Atmosferik qizg'ish olov nuri)
+	_torch(Vector3(-21.2, 3.0, -14.0))
+	_torch(Vector3(-21.2, 3.0, 14.0))
+	_torch(Vector3(21.2, 3.0, -14.0))
+	_torch(Vector3(21.2, 3.0, 14.0))
+	_torch(Vector3(35.2, 3.0, 0.0))
 
-	# Zindon soqchilari (Elite elit nayzachi va qilichchi)
-	_spawn_guard(EnemyScript.Kind.SPEAR, Vector3(-4, 0, -6))
-	_spawn_guard(EnemyScript.Kind.SWORD, Vector3(4, 0, -6))
+	# 1-Qavat Soqchilari (Elite nayzachi va qilichchi)
+	_spawn_guard(EnemyScript.Kind.SPEAR, Vector3(-5, 0, 20))
+	_spawn_guard(EnemyScript.Kind.SWORD, Vector3(5, 0, 20))
+
+	# 2-Qavat: O'lim Tuzoqlari Labirinti (Aylanuvchi pichoqlar va bosim plitalari)
+	_build_trap_maze()
+
+	# 3-Qavat: Taxt Zali va Muallaq Qafas
+	_build_throne_and_cage()
+
+	# Sharqiy qanot: Nur va Ko'zgu Boshqotirmasi
+	_build_mirror_puzzle_room()
+
+
+func _build_trap_maze() -> void:
+	# Aylanuvchi tig'lar tuzoqlari
+	var trap1 := BladeTrapScript.new()
+	trap1.position = Vector3(-4.0, 0, 0.0)
+	trap1.damage = 22.0
+	trap1.rotation_speed = 3.2
+	add_child(trap1)
+	blade_traps.append(trap1)
+
+	var trap2 := BladeTrapScript.new()
+	trap2.position = Vector3(4.0, 0, -8.0)
+	trap2.damage = 25.0
+	trap2.rotation_speed = -3.8
+	add_child(trap2)
+	blade_traps.append(trap2)
+
+	# Bosim plitalari
+	var plate1 := PressurePlateScript.new()
+	plate1.plate_id = "dungeon_plate_north"
+	plate1.position = Vector3(0.0, 0, -4.0)
+	add_child(plate1)
+	pressure_plates.append(plate1)
+
+	var plate2 := PressurePlateScript.new()
+	plate2.plate_id = "dungeon_plate_east"
+	plate2.position = Vector3(16.0, 0, 0.0)
+	add_child(plate2)
+	pressure_plates.append(plate2)
+
+
+func _build_throne_and_cage() -> void:
+	# Muallaq temir qafas va chig'ir richagi
+	suspended_cage = SuspendedCageScript.new()
+	suspended_cage.position = Vector3(0, 0, 14)
+	add_child(suspended_cage)
 
 	# Barchinoy NPC
 	barchin = NPCScript.new()
@@ -57,13 +125,20 @@ func _build_dungeon() -> void:
 	barchin.rotation_degrees.y = 180.0
 	add_child(barchin)
 
-	# Karajon NPC (Do'stlashgan qalmoq alp-botiri)
+	# Karajon NPC (Qalmoq alp-botiri)
 	karajon = NPCScript.new()
-	karajon.character_type = NPCScript.CharacterType.KARAJON # maxsus mat bilan
+	karajon.character_type = NPCScript.CharacterType.KARAJON
 	karajon.character_name = "Karajon Botir"
 	karajon.position = Vector3(5, 0, 12)
 	karajon.rotation_degrees.y = 160.0
 	add_child(karajon)
+
+
+func _build_mirror_puzzle_room() -> void:
+	# Sharqiy xonada nur va ko'zgu boshqotirmasi
+	mirror_puzzle = LightMirrorPuzzleScript.new()
+	mirror_puzzle.position = Vector3(26.0, 0, 0.0)
+	add_child(mirror_puzzle)
 
 
 func _spawn_guard(kind_val: int, pos: Vector3) -> void:
@@ -108,7 +183,6 @@ func _torch(pos: Vector3) -> void:
 	omni.shadow_enabled = true
 	add_child(omni)
 
-	# Olov tutqichi
 	var mi := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(0.3, 0.8, 0.3)
