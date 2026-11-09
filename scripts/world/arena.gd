@@ -19,6 +19,8 @@ const DayNightCycleScript = preload("res://scripts/world/day_night_cycle.gd")
 const MainMenuScript = preload("res://scripts/ui/main_menu.gd")
 const TreasureChestScript = preload("res://scripts/world/treasure_chest.gd")
 const ShopMenuScript = preload("res://scripts/ui/shop_menu.gd")
+const CraftingMenuScript = preload("res://scripts/ui/crafting_menu.gd")
+const ResourceNodeScript = preload("res://scripts/world/resource_node.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -57,6 +59,11 @@ func _ready() -> void:
 	var shop_menu := ShopMenuScript.new()
 	shop_menu.add_to_group("shop_menu")
 	add_child(shop_menu)
+
+	# Hunarmandchilik Menyusi [ V ]
+	var craft_menu := CraftingMenuScript.new()
+	craft_menu.add_to_group("crafting_menu")
+	add_child(craft_menu)
 
 	# Yagona yaxlit ulkan Boysun dashti zamini: Shimoldagi Zindon va Qal'agacha to'liq cho'zilgan
 	_box(Vector3(0, -1.0, -50), Vector3(500, 2.0, 500), Color(0.42, 0.45, 0.28))
@@ -112,6 +119,9 @@ func _ready() -> void:
 
 	# Qadimiy xazina sandiqlari (Loot & Economy)
 	_build_treasure_chests()
+
+	# Tabiiy resurslar (Temir rudasi, Qora saksovul, Shifobaxsh giyohlar)
+	_build_resource_nodes()
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
@@ -676,4 +686,33 @@ func _spawn_chest(id: String, pos: Vector3, gold: int, rot_y_deg := 0.0) -> Node
 	chest.rotation_degrees.y = rot_y_deg
 	add_child(chest)
 	return chest
+
+
+func _build_resource_nodes() -> void:
+	# 1. Tog' Temir Rudalari (Mining Ores)
+	_spawn_resource_node("ore_cliffs_01", ResourceNodeScript.Type.IRON_ORE, Vector3(25.0, 0.0, 32.0), 3)
+	_spawn_resource_node("ore_cliffs_02", ResourceNodeScript.Type.IRON_ORE, Vector3(45.0, 0.0, 52.0), 3)
+	_spawn_resource_node("ore_north_01", ResourceNodeScript.Type.IRON_ORE, Vector3(-18.0, 0.0, -35.0), 4)
+
+	# 2. Qora Saksovul va Archa Yog'ochlari (Steppe Wood)
+	_spawn_resource_node("wood_steppe_01", ResourceNodeScript.Type.WOOD, Vector3(12.0, 0.0, 28.0), 3)
+	_spawn_resource_node("wood_steppe_02", ResourceNodeScript.Type.WOOD, Vector3(38.0, 0.0, 22.0), 3)
+	_spawn_resource_node("wood_steppe_03", ResourceNodeScript.Type.WOOD, Vector3(-14.0, 0.0, 15.0), 2)
+
+	# 3. Dasht Shifobaxsh Giyohlari (Isiriq va Kiyiko't)
+	_spawn_resource_node("herbs_meadow_01", ResourceNodeScript.Type.HERBS, Vector3(14.0, 0.0, 8.0), 3)
+	_spawn_resource_node("herbs_meadow_02", ResourceNodeScript.Type.HERBS, Vector3(24.0, 0.0, 16.0), 3)
+	_spawn_resource_node("herbs_meadow_03", ResourceNodeScript.Type.HERBS, Vector3(36.0, 0.0, 30.0), 4)
+	_spawn_resource_node("herbs_meadow_04", ResourceNodeScript.Type.HERBS, Vector3(-6.0, 0.0, -12.0), 2)
+
+
+func _spawn_resource_node(id: String, type_val: int, pos: Vector3, yield_amt: int) -> Node3D:
+	var node = ResourceNodeScript.new()
+	node.resource_node_id = id
+	node.resource_type = type_val
+	node.yield_amount = yield_amt
+	node.position = pos
+	add_child(node)
+	return node
+
 

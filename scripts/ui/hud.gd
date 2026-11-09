@@ -61,10 +61,18 @@ func _ready() -> void:
 	_gold_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.25))
 	add_child(_gold_label)
 
+	var _craft_hint := Label.new()
+	_craft_hint.name = "CraftHint"
+	_craft_hint.text = "[ V ] - Yasash"
+	_craft_hint.position = Vector2(130, 72)
+	_craft_hint.add_theme_font_size_override("font_size", 12)
+	_craft_hint.add_theme_color_override("font_color", Color(0.7, 0.95, 0.75))
+	add_child(_craft_hint)
+
 	_skill_hint = Label.new()
-	_skill_hint.text = "★ [ TAB ] - Yangi ko'nikma ochkosi!"
-	_skill_hint.position = Vector2(130, 72)
-	_skill_hint.add_theme_font_size_override("font_size", 13)
+	_skill_hint.text = "★ [ TAB ] - Yangi ko'nikma!"
+	_skill_hint.position = Vector2(230, 72)
+	_skill_hint.add_theme_font_size_override("font_size", 12)
 	_skill_hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
 	_skill_hint.visible = false
 	add_child(_skill_hint)

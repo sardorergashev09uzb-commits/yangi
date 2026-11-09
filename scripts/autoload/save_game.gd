@@ -66,13 +66,23 @@ func collect_state() -> Dictionary:
 			"plate_armor": bool(player.get("is_plate_armor_equipped")),
 			"horseshoes": bool(player.get("has_golden_horseshoes")),
 			"fire_arrows": int(player.get("fire_arrows_count")),
-			"piercing_arrows": int(player.get("piercing_arrows_count"))
+			"piercing_arrows": int(player.get("piercing_arrows_count")),
+			"iron_ore": int(player.get("iron_ore")),
+			"wood": int(player.get("wood")),
+			"herbs": int(player.get("herbs")),
+			"torch": bool(player.get("torch_active"))
 		}
 	var opened_chests: Array[String] = []
 	for chest in get_tree().get_nodes_in_group("treasure_chests"):
 		if chest and chest.get("is_opened") and chest.get("chest_id") != "":
 			opened_chests.append(String(chest.get("chest_id")))
 	data["chests"] = opened_chests
+
+	var harvested_nodes: Array[String] = []
+	for node in get_tree().get_nodes_in_group("resource_nodes"):
+		if node and node.get("is_depleted") and node.get("resource_node_id") != "":
+			harvested_nodes.append(String(node.get("resource_node_id")))
+	data["harvested_nodes"] = harvested_nodes
 	return data
 
 
@@ -155,6 +165,16 @@ func apply_state(data: Dictionary) -> void:
 			player.set("fire_arrows_count", int(pd["fire_arrows"]))
 		if pd.has("piercing_arrows"):
 			player.set("piercing_arrows_count", int(pd["piercing_arrows"]))
+		if pd.has("iron_ore"):
+			player.set("iron_ore", int(pd["iron_ore"]))
+		if pd.has("wood"):
+			player.set("wood", int(pd["wood"]))
+		if pd.has("herbs"):
+			player.set("herbs", int(pd["herbs"]))
+		if pd.get("torch", false) and player.has_method("enable_torch"):
+			player.enable_torch(true)
+		if player.has_signal("resources_changed"):
+			player.emit_signal("resources_changed", player.get("iron_ore"), player.get("wood"), player.get("herbs"))
 		player.health_changed.emit(player.health, player.max_health)
 		player.stamina_changed.emit(player.stamina, player.max_stamina)
 		if player.rig:
@@ -166,6 +186,13 @@ func apply_state(data: Dictionary) -> void:
 			if chest and chest.get("chest_id") in opened:
 				if chest.has_method("set_opened_silent"):
 					chest.set_opened_silent()
+
+	if data.has("harvested_nodes"):
+		var harvested: Array = data["harvested_nodes"]
+		for node in get_tree().get_nodes_in_group("resource_nodes"):
+			if node and node.get("resource_node_id") in harvested:
+				if node.has_method("set_depleted_silent"):
+					node.set_depleted_silent()
 
 
 ## Yengilgan dushmanlar dunyoda qayta paydo bo'lmasligi uchun

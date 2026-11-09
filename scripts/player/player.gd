@@ -5,6 +5,7 @@ extends CharacterBody3D
 signal stamina_changed(current: float, maximum: float)
 signal health_changed(current: float, maximum: float)
 signal gold_changed(new_gold: int, delta_amount: int)
+signal resources_changed(iron: int, wood: int, herbs: int)
 signal died
 signal respawned
 
@@ -68,6 +69,13 @@ var has_golden_horseshoes: bool = false
 var qimiz_buff_timer: float = 0.0
 var is_steel_sword_equipped: bool = false
 var is_plate_armor_equipped: bool = false
+
+# 3-Bosqich: Resurslar va Hunarmandchilik
+var iron_ore: int = 0
+var wood: int = 0
+var herbs: int = 0
+var torch_active: bool = false
+var torch_node: OmniLight3D = null
 
 var invulnerable: bool:
 	get:
@@ -942,3 +950,80 @@ func _execute_earthquake() -> void:
 	quake.damage = dmg
 	quake.global_position = global_position
 	get_tree().current_scene.add_child(quake)
+
+
+# ---------------------------------------------------------------- Resurslar va Hunarmandchilik
+
+func add_resource(res_type: String, amount: int) -> void:
+	match res_type:
+		"iron_ore":
+			iron_ore += amount
+		"wood":
+			wood += amount
+		"herbs":
+			herbs += amount
+	resources_changed.emit(iron_ore, wood, herbs)
+
+
+func spend_resource(res_type: String, amount: int) -> bool:
+	match res_type:
+		"iron_ore":
+			if iron_ore >= amount:
+				iron_ore -= amount
+				resources_changed.emit(iron_ore, wood, herbs)
+				return true
+		"wood":
+			if wood >= amount:
+				wood -= amount
+				resources_changed.emit(iron_ore, wood, herbs)
+				return true
+		"herbs":
+			if herbs >= amount:
+				herbs -= amount
+				resources_changed.emit(iron_ore, wood, herbs)
+				return true
+	return false
+
+
+func has_resources(recipe: Dictionary) -> bool:
+	var req_iron: int = int(recipe.get("iron_ore", 0))
+	var req_wood: int = int(recipe.get("wood", 0))
+	var req_herbs: int = int(recipe.get("herbs", 0))
+	var req_gold: int = int(recipe.get("gold", 0))
+	return iron_ore >= req_iron and wood >= req_wood and herbs >= req_herbs and gold >= req_gold
+
+
+func consume_resources(recipe: Dictionary) -> bool:
+	if not has_resources(recipe):
+		return false
+	var req_iron: int = int(recipe.get("iron_ore", 0))
+	var req_wood: int = int(recipe.get("wood", 0))
+	var req_herbs: int = int(recipe.get("herbs", 0))
+	var req_gold: int = int(recipe.get("gold", 0))
+
+	iron_ore -= req_iron
+	wood -= req_wood
+	herbs -= req_herbs
+	if req_gold > 0:
+		spend_gold(req_gold)
+	resources_changed.emit(iron_ore, wood, herbs)
+	return true
+
+
+func enable_torch(enable: bool) -> void:
+	torch_active = enable
+	if enable:
+		if torch_node == null or not is_instance_valid(torch_node):
+			torch_node = OmniLight3D.new()
+			torch_node.light_color = Color(1.0, 0.65, 0.25) # Olov nuri
+			torch_node.light_energy = 2.4
+			torch_node.omni_range = 16.0
+			torch_node.position = Vector3(0.4, 1.4, 0.3)
+			add_child(torch_node)
+		else:
+			torch_node.visible = true
+		FX.sparks(global_position + Vector3.UP * 1.5, Vector3.UP, Color(1.0, 0.5, 0.1), 12)
+	else:
+		if torch_node and is_instance_valid(torch_node):
+			torch_node.visible = false
+
