@@ -168,19 +168,26 @@ func _test_ancient_balbals_quest() -> void:
 	b4.balbal_name = "G'arbiy Balbal"
 	add_child(b4)
 
-	# 1-balbal bilan muloqot
+	# 1-balbal (Shimoliy) bilan muloqot
 	b1.commune()
 	assert(b1.is_communed, "1-balbal duo olingan deb belgilanadi")
 	assert(player.health == 85.0, "Balbal o'yinchini +35 HP ga shifolashi kerak (50 + 35 = 85)")
 	assert(qs.communed_balbals.size() == 1, "1 ta balbal yozilishi kerak")
 	assert(not qs.is_quest_completed("ancient_balbals"), "Hali kvest tugallanmasligi kerak")
+	assert(qs.is_objective_completed("ancient_balbals", 0), "Shimoliy balbal maqsadi bajarilgan deb ko'rinishi kerak")
+	assert(not qs.is_objective_completed("ancient_balbals", 3), "G'arbiy balbal hali ziyorat qilinmagan")
+
+	# G'arbiy balbal (b4) alohida tekshirish
+	b4.commune()
+	assert(qs.is_objective_completed("ancient_balbals", 3), "G'arbiy balbal ziyorat qilingach, jurnalda G'arbiy balbal maqsadi bajarilgan deb ko'rinishi kerak")
+	assert(not qs.is_objective_completed("ancient_balbals", 1), "Sharqiy balbal hali ziyorat qilinmagan")
 
 	b2.commune()
 	b3.commune()
-	b4.commune()
 
 	assert(qs.communed_balbals.size() == 4, "4 ta balbal yozilishi kerak")
 	assert(qs.is_quest_completed("ancient_balbals"), "4 ta balbal ziyorat qilingach kvest yakunlanishi kerak")
+	assert(qs.is_objective_completed("ancient_balbals", 1), "Barcha maqsadlar yakunlangan bo'lishi kerak")
 	assert(int(player.get("gold")) == initial_gold + 50, "Balbal tilsimi uchun +50 tilla mukofot berilishi kerak")
 
 	tests_passed += 1

@@ -18,6 +18,21 @@ func _ready() -> void:
 	collision_mask = 0
 	_build_monolith()
 	_build_prompt()
+	call_deferred("_sync_communed_state")
+
+
+func _sync_communed_state() -> void:
+	var qs = get_tree().get_first_node_in_group("quest_system")
+	if qs and qs.get("communed_balbals") != null and qs.communed_balbals.has(balbal_id):
+		is_communed = true
+		_prompt.text = "🗿 %s ✓\n(Ajdodlar ruhi qo'llab-quvvatladi)" % balbal_name
+		_prompt.modulate = Color(1.0, 0.85, 0.25)
+		if _rune_material:
+			_rune_material.emission = Color(1.0, 0.85, 0.25)
+			_rune_material.emission_energy_multiplier = 3.5
+		if _rune_light:
+			_rune_light.light_color = Color(1.0, 0.85, 0.25)
+			_rune_light.light_energy = 4.0
 
 
 func _build_monolith() -> void:

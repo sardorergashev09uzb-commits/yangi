@@ -152,6 +152,9 @@ func _physics_process(delta: float) -> void:
 			velocity.z = move_toward(velocity.z, 0.0, 10.0 * delta)
 			if dist < aggro_range:
 				state = State.CHASE
+				var qs = get_tree().get_first_node_in_group("quest_system")
+				if qs and qs.has_method("set_objective_completed"):
+					qs.set_objective_completed("bandit_outpost", 0)
 
 		State.CHASE:
 			_cooldown = maxf(_cooldown - delta, 0.0)
@@ -298,6 +301,9 @@ func _die() -> void:
 	CoinDropScript.spawn_coins(get_tree(), global_position + Vector3.UP * 1.0, 45, 6)
 
 	var qs = get_tree().get_first_node_in_group("quest_system")
+	if qs and qs.has_method("set_objective_completed"):
+		qs.set_objective_completed("bandit_outpost", 0)
+		qs.set_objective_completed("bandit_outpost", 1)
 	if qs and qs.has_method("complete_quest"):
 		qs.complete_quest("bandit_outpost")
 	if qs and qs.has_method("emit_signal"):

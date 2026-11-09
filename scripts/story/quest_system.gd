@@ -240,6 +240,82 @@ func record_balbal(balbal_id: String) -> int:
 	return communed_balbals.size()
 
 
+func set_objective_completed(quest_id: String, obj_index: int, completed := true) -> void:
+	if not quests.has(quest_id):
+		return
+	var q: Dictionary = quests[quest_id]
+	if not q.has("completed_objectives"):
+		q["completed_objectives"] = []
+	var arr: Array = q["completed_objectives"]
+	if completed and not arr.has(obj_index):
+		arr.append(obj_index)
+		quest_state_changed.emit(quest_id, q.get("completed", false))
+	elif not completed and arr.has(obj_index):
+		arr.erase(obj_index)
+		quest_state_changed.emit(quest_id, q.get("completed", false))
+
+
+func is_objective_completed(quest_id: String, obj_index: int) -> bool:
+	if not quests.has(quest_id):
+		return false
+	var q: Dictionary = quests[quest_id]
+	if q.get("completed", false):
+		return true
+
+	match quest_id:
+		"ancient_balbals":
+			var balbal_keys := ["balbal_north", "balbal_east", "balbal_south", "balbal_west"]
+			if obj_index >= 0 and obj_index < balbal_keys.size():
+				var key: String = balbal_keys[obj_index]
+				if communed_balbals.has(key):
+					return true
+				var tag := key.substr(7)
+				for b_id in communed_balbals:
+					if tag in b_id.to_lower():
+						return true
+			var alt_id := "balbal_%d" % (obj_index + 1)
+			var test_id := "test_balbal_%d" % (obj_index + 1)
+			if communed_balbals.has(alt_id) or communed_balbals.has(test_id):
+				return true
+			return false
+
+		"lost_flock":
+			var sheep_keys := ["sheep_1", "sheep_2", "sheep_3"]
+			if obj_index >= 0 and obj_index < sheep_keys.size():
+				var key: String = sheep_keys[obj_index]
+				if rescued_sheep.has(key):
+					return true
+			var test_id := "test_sheep_%d" % (obj_index + 1)
+			if rescued_sheep.has(test_id):
+				return true
+			return false
+
+		_:
+			var done_objs: Array = q.get("completed_objectives", [])
+			if done_objs.has(obj_index):
+				return true
+			var prog: int = int(q.get("progress", 0))
+			var max_p: int = int(q.get("max_progress", 1))
+			if max_p > 1:
+				return obj_index < prog
+			return false
+
+
+func get_objectives_save_data() -> Dictionary:
+	var result := {}
+	for qid in quests.keys():
+		var q = quests[qid]
+		if q.has("completed_objectives"):
+			result[qid] = q["completed_objectives"].duplicate()
+	return result
+
+
+func restore_objectives_save_data(data: Dictionary) -> void:
+	for qid in data.keys():
+		if quests.has(qid):
+			quests[qid]["completed_objectives"] = Array(data[qid])
+
+
 func complete_quest(id: String) -> void:
 	if not quests.has(id):
 		return
@@ -249,6 +325,13 @@ func complete_quest(id: String) -> void:
 
 	q.completed = true
 	q.progress = q.get("max_progress", 1)
+	if q.has("objectives"):
+		var total_objs: int = q["objectives"].size()
+		if not q.has("completed_objectives"):
+			q["completed_objectives"] = []
+		for i in range(total_objs):
+			if not q["completed_objectives"].has(i):
+				q["completed_objectives"].append(i)
 	quest_state_changed.emit(id, true)
 
 	var xp_reward: int = int(q.get("xp", 50))

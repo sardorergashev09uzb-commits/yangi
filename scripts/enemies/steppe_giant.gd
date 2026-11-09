@@ -129,6 +129,9 @@ func _physics_process(delta: float) -> void:
 			velocity.z = move_toward(velocity.z, 0.0, 20.0 * delta)
 			if dist < aggro_range:
 				state = State.CHASE
+				var qs = get_tree().get_first_node_in_group("quest_system")
+				if qs and qs.has_method("set_objective_completed"):
+					qs.set_objective_completed("giant", 0)
 		State.CHASE:
 			_face(dir, delta, 4.0)
 			if dist > 6.0:

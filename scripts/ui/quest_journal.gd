@@ -418,9 +418,18 @@ func refresh_journal() -> void:
 		text_vbox.add_child(qname)
 
 		var qhint := Label.new()
-		qhint.text = "Bajarildi (+%d XP, +%d Tilla)" % [q.get("xp", 50), q.get("gold", 0)] if is_comp else q.get("hint", "")
+		var card_prog: int = int(q.get("progress", 0))
+		var card_max: int = int(q.get("max_progress", 1))
+		if is_comp:
+			qhint.text = "Bajarildi (+%d XP, +%d Tilla)" % [q.get("xp", 50), q.get("gold", 0)]
+			qhint.add_theme_color_override("font_color", Color(0.45, 0.85, 0.5))
+		elif card_max > 1 and card_prog > 0:
+			qhint.text = "%s (%d/%d)" % [q.get("hint", ""), card_prog, card_max]
+			qhint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+		else:
+			qhint.text = q.get("hint", "")
+			qhint.add_theme_color_override("font_color", Color(0.7, 0.65, 0.55))
 		qhint.add_theme_font_size_override("font_size", 10)
-		qhint.add_theme_color_override("font_color", Color(0.45, 0.85, 0.5) if is_comp else Color(0.7, 0.65, 0.55))
 		text_vbox.add_child(qhint)
 
 		card_btn.pressed.connect(func():
@@ -442,9 +451,15 @@ func _display_quest_details(q: Dictionary) -> void:
 	_detail_title.text = q.get("title", "")
 	_detail_category_badge.text = "[ ASOSIY DOSTON ]" if q.get("category", "main") == "main" else "[ EL-YURT VAZIFASI ]"
 
+	var prog: int = int(q.get("progress", 0))
+	var max_p: int = int(q.get("max_progress", 1))
+
 	if is_comp:
 		_detail_status_badge.text = "[✓ TUGALLANDI]"
 		_detail_status_badge.add_theme_color_override("font_color", Color(0.3, 0.95, 0.45))
+	elif max_p > 1 and prog > 0:
+		_detail_status_badge.text = "[⏳ BAJARILMOQDA (%d/%d)]" % [prog, max_p]
+		_detail_status_badge.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25))
 	else:
 		_detail_status_badge.text = "[⏳ BAJARILMOQDA]"
 		_detail_status_badge.add_theme_color_override("font_color", Color(1.0, 0.82, 0.25))
@@ -457,14 +472,16 @@ func _display_quest_details(q: Dictionary) -> void:
 		ch.queue_free()
 
 	var objs: Array = q.get("objectives", [q.get("desc", "")])
-	var prog: int = int(q.get("progress", 0))
-	var max_p: int = int(q.get("max_progress", objs.size()))
+	var qid: String = q.get("id", "")
+	var qs = get_tree().get_first_node_in_group("quest_system")
 
 	for i in range(objs.size()):
 		var obj_text: String = String(objs[i])
 		var obj_done := false
 		if is_comp:
 			obj_done = true
+		elif qs and qs.has_method("is_objective_completed"):
+			obj_done = qs.is_objective_completed(qid, i)
 		elif max_p > 1:
 			obj_done = (i < prog)
 

@@ -150,6 +150,8 @@ func open_chest(player: Node3D = null) -> void:
 	var qsystem = get_tree().get_first_node_in_group("quest_system")
 	if qsystem and qsystem.has_signal("banner_requested"):
 		qsystem.banner_requested.emit("XAZINA TOPILDI!", "+%d Tilla tanga qo'lga kiritildi!" % gold_amount)
+	if qsystem and chest_id == "chest_bandit_outpost" and qsystem.has_method("set_objective_completed"):
+		qsystem.set_objective_completed("bandit_outpost", 2)
 
 	chest_opened.emit(chest_id, gold_amount)
 

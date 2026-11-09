@@ -490,8 +490,14 @@ func _open_gate() -> void:
 
 
 func _on_player_entered_arena(body: Node3D) -> void:
+	if not body.is_in_group("player"):
+		return
+	var qsystem = get_tree().get_first_node_in_group("quest_system")
+	if qsystem and qsystem.has_method("set_objective_completed"):
+		qsystem.set_objective_completed("boss", 0)
+
 	# Agar boss tashqaridan otib o'ldirilgan bo'lsa, yoki allqachon o'lgan bo'lsa (State.DEAD = 7), darvoza yopilmaydi!
-	if _boss_defeated_flag or _fight_started or not body.is_in_group("player"):
+	if _boss_defeated_flag or _fight_started:
 		return
 	if _boss == null or not is_instance_valid(_boss) or _boss.get("state") == 7: # State.DEAD = 7
 		return
@@ -667,6 +673,11 @@ func _on_dungeon_portal_entered() -> void:
 			player.velocity = Vector3.ZERO
 		Audio.play_level_up()
 		FX.popup(target_pos + Vector3.UP * 2.5, 0.0, Color(0.9, 0.2, 0.5))
+
+		var qs = get_tree().get_first_node_in_group("quest_system")
+		if qs and qs.has_method("set_objective_completed"):
+			qs.set_objective_completed("karajon_oath", 0)
+			qs.set_objective_completed("rescue_barchin", 0)
 
 
 func _check_void_safety() -> void:

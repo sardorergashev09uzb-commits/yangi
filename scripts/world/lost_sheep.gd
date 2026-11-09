@@ -19,6 +19,15 @@ func _ready() -> void:
 	_orig_y = position.y
 	_build_visuals()
 	_build_prompt()
+	call_deferred("_sync_rescued_state")
+
+
+func _sync_rescued_state() -> void:
+	var qs = get_tree().get_first_node_in_group("quest_system")
+	if qs and qs.get("rescued_sheep") != null and qs.rescued_sheep.has(sheep_id):
+		is_rescued = true
+		_prompt.text = "🐑 Qutqarildi ✓\n(Suruvga qaytdi)"
+		_prompt.modulate = Color(0.35, 1.0, 0.45)
 
 
 func _build_visuals() -> void:
