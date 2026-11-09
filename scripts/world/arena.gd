@@ -30,6 +30,9 @@ const TerrainShader = preload("res://shaders/terrain_steppe.gdshader")
 const SteppeFoliageScript = preload("res://scripts/world/steppe_foliage.gd")
 const WaterStreamScript = preload("res://scripts/world/water_stream.gd")
 const MirageDesertScript = preload("res://scripts/world/mirage_desert.gd")
+const BossDragonScript = preload("res://scripts/enemies/boss_dragon.gd")
+const BossShamanScript = preload("res://scripts/enemies/boss_shaman.gd")
+const BossColossusScript = preload("res://scripts/enemies/boss_colossus.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -46,6 +49,13 @@ var _giant: CharacterBody3D
 var _giant_spawn := Vector3(38, 0, 48)
 var _caravan: Node3D
 var _bandit_chief: CharacterBody3D
+
+var _dragon: CharacterBody3D
+var _dragon_spawn := Vector3(-115, 0.2, 75)
+var _shaman: CharacterBody3D
+var _shaman_spawn := Vector3(-75, 1.2, 58)
+var _colossus: CharacterBody3D
+var _colossus_spawn := Vector3(75, 0.2, 110)
 
 
 func _ready() -> void:
@@ -159,6 +169,9 @@ func _ready() -> void:
 
 	# Qadimiy tosh Balballar (4 ta muqaddas obida)
 	_build_ancient_balbals()
+
+	# 7-bosqich: Yangi Mifologik Bosslar (Yetti Boshli Qora Ajdaho, Qalmoq Bosh Shomoni, Tosh Koloss)
+	_spawn_mythic_bosses()
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
@@ -360,6 +373,10 @@ func _on_player_respawned() -> void:
 	if _giant and is_instance_valid(_giant) and _giant.has_method("reset_to_spawn"):
 		_giant.reset_to_spawn(_giant_spawn)
 
+	# Yetti boshli qora ajdaho tirik bo'lsa, joyiga qaytadi
+	if _dragon and is_instance_valid(_dragon) and _dragon.has_method("reset_boss"):
+		_dragon.reset_boss(_dragon_spawn)
+
 	# Boychibor otdan tushgan bo'lsa, o'yinchi yoniga qaytadi
 	if _horse and is_instance_valid(_horse) and not _horse.get("is_mounted"):
 		_horse.global_position = Vector3(4.5, 0.1, 3.5)
@@ -380,6 +397,26 @@ func _on_player_respawned() -> void:
 	for child in get_children():
 		if is_instance_valid(child) and child.is_in_group("shockwaves"):
 			child.queue_free()
+
+
+func _spawn_mythic_bosses() -> void:
+	# 1. Yetti Boshli Qora Ajdaho (Qoraqum Sahrosi Kraterida: X = -115, Z = 75)
+	_dragon = BossDragonScript.new()
+	_dragon.name = "QoraAjdaho"
+	_dragon.position = _dragon_spawn
+	add_child(_dragon)
+
+	# 2. Qalmoq Bosh Shomoni — Qora Ko'rpasht (Maqbara mehrobida: X = -75, Z = 58)
+	_shaman = BossShamanScript.new()
+	_shaman.name = "QoraKorpasht"
+	_shaman.position = _shaman_spawn
+	add_child(_shaman)
+
+	# 3. Qoya Yurar — 15 metrlik Tosh Koloss (Sharqiy tog' etagida: X = 75, Z = 110)
+	_colossus = BossColossusScript.new()
+	_colossus.name = "ToshKoloss"
+	_colossus.position = _colossus_spawn
+	add_child(_colossus)
 
 
 func _spawn_enemy(kind_val: int, pos: Vector3) -> void:

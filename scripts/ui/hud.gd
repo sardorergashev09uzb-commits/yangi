@@ -353,17 +353,16 @@ func _show_gold_popup(text: String, col := Color(1.0, 0.88, 0.25)) -> void:
 
 
 func _connect_boss() -> void:
-	var boss := get_tree().get_first_node_in_group("bosses")
-	if boss == null:
-		return
-	boss.boss_activated.connect(_on_boss_activated)
-	boss.boss_health_changed.connect(_on_boss_health)
-	boss.boss_phase_transition.connect(_on_boss_phase)
-	boss.boss_defeated.connect(_on_boss_defeated)
+	for boss in get_tree().get_nodes_in_group("bosses"):
+		if not boss.boss_activated.is_connected(_on_boss_activated):
+			boss.boss_activated.connect(_on_boss_activated)
+			boss.boss_health_changed.connect(_on_boss_health)
+			boss.boss_phase_transition.connect(_on_boss_phase)
+			boss.boss_defeated.connect(func(): _on_boss_defeated(boss))
 
 
 func _on_boss_activated(bname: String, cur: float, max_hp: float) -> void:
-	_boss_name_label.text = bname + " - Qalmoq Botiri"
+	_boss_name_label.text = bname
 	_boss_bar.max_value = max_hp
 	_boss_bar.value = cur
 	_boss_phase_label.text = "1-BOSQICH"
@@ -373,22 +372,30 @@ func _on_boss_activated(bname: String, cur: float, max_hp: float) -> void:
 func _on_boss_health(cur: float, max_hp: float, phase: int) -> void:
 	_boss_bar.max_value = max_hp
 	_boss_bar.value = cur
-	_boss_phase_label.text = "2-BOSQICH: QUTURGAN!" if phase == 2 else "1-BOSQICH"
+	if phase == 2:
+		_boss_phase_label.text = "2-BOSQICH: QUTURGAN!"
+	elif phase == 3:
+		_boss_phase_label.text = "3-BOSQICH: AFSONAVIY G'AZAB!"
+	else:
+		_boss_phase_label.text = "1-BOSQICH"
 
 
 func _on_boss_phase(phase: int) -> void:
 	if phase == 2:
 		_boss_phase_label.text = "2-BOSQICH: QUTURGAN!"
+		_boss_phase_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.1))
+	elif phase == 3:
+		_boss_phase_label.text = "3-BOSQICH: AFSONAVIY G'AZAB!"
 		_boss_phase_label.add_theme_color_override("font_color", Color(1.0, 0.1, 0.1))
-		var fill := _boss_bar.get_theme_stylebox("fill") as StyleBoxFlat
-		if fill:
-			fill.bg_color = Color(1.0, 0.25, 0.05)
 
 
-func _on_boss_defeated() -> void:
-	# Boss yengilganda o'yin majburan to'xtamaydi! O'yinchi bemalol dashtni kezishi mumkin.
+func _on_boss_defeated(boss_node: Node = null) -> void:
 	_boss_container.visible = false
-	show_banner("SURXAYIL ALP YENGILDI!", "Qalmoq botiri tiz cho'kdi! Dasht sari yo'l ochiq!")
+	var title := "MIFOLOGIK BOSS YENGILDI!"
+	var sub := "Buyuk g'alaba! Dasht qahramoni Alpomish nomiga dostonlar bitilur!"
+	if boss_node and "name" in boss_node:
+		title = str(boss_node.name).to_upper() + " YENGILDI!"
+	show_banner(title, sub)
 
 
 func _on_all_quests_completed() -> void:
