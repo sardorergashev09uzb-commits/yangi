@@ -21,6 +21,8 @@ var _player: CharacterBody3D
 var _timer := 0.0
 var _cooldown := 1.2
 var _spin_angle := 0.0
+var _whirlwind_hit_cooldown := 0.0
+var _slash_tween: Tween
 var _visual_root: Node3D
 var _mat: StandardMaterial3D
 var _hp_label: Label3D
@@ -179,6 +181,7 @@ func _physics_process(delta: float) -> void:
 
 		State.WHIRLWIND:
 			_timer -= delta
+			_whirlwind_hit_cooldown = maxf(_whirlwind_hit_cooldown - delta, 0.0)
 			_spin_angle += 25.0 * delta
 			_visual_root.rotation.y = _spin_angle
 			var dir := (_player.global_position - global_position).normalized()
@@ -189,8 +192,9 @@ func _physics_process(delta: float) -> void:
 			if int(_timer * 10) % 2 == 0:
 				FX.sparks(global_position + Vector3.UP * 1.2, Vector3.UP, Color(1.0, 0.4, 0.2), 6)
 
-			if dist < 2.6 and _timer > 0.2:
-				_hit_player(22.0)
+			if dist < 2.6 and _timer > 0.2 and _whirlwind_hit_cooldown <= 0.0:
+				_hit_player(22.0, 6.0)
+				_whirlwind_hit_cooldown = 0.45
 
 			if _timer <= 0.0:
 				_visual_root.rotation.y = 0.0
@@ -211,31 +215,42 @@ func _start_slash() -> void:
 	state = State.SLASH
 	_timer = 0.45
 	Audio.play_sword_swing()
-	var t := create_tween()
-	for w in _weapons:
-		t.tween_property(w, "rotation_degrees:x", -60.0, 0.2)
-		t.tween_property(w, "rotation_degrees:x", 30.0, 0.25)
+	if _slash_tween and _slash_tween.is_valid():
+		_slash_tween.kill()
+	_slash_tween = create_tween()
+	if _weapons.size() >= 2:
+		_slash_tween.tween_property(_weapons[0], "rotation_degrees:x", -60.0, 0.2)
+		_slash_tween.parallel().tween_property(_weapons[1], "rotation_degrees:x", -60.0, 0.2)
+		_slash_tween.tween_property(_weapons[0], "rotation_degrees:x", 30.0, 0.2)
+		_slash_tween.parallel().tween_property(_weapons[1], "rotation_degrees:x", 30.0, 0.2)
+		_slash_tween.tween_property(_weapons[0], "rotation_degrees:x", 0.0, 0.05)
+		_slash_tween.parallel().tween_property(_weapons[1], "rotation_degrees:x", 0.0, 0.05)
+	elif _weapons.size() == 1:
+		_slash_tween.tween_property(_weapons[0], "rotation_degrees:x", -60.0, 0.2)
+		_slash_tween.tween_property(_weapons[0], "rotation_degrees:x", 30.0, 0.2)
+		_slash_tween.tween_property(_weapons[0], "rotation_degrees:x", 0.0, 0.05)
 
 
 func _execute_slash() -> void:
 	if _player and global_position.distance_to(_player.global_position) < 2.8:
-		_hit_player(18.0)
+		_hit_player(18.0, 5.0)
 
 
 func _start_whirlwind() -> void:
 	state = State.WHIRLWIND
 	_timer = 1.8
 	_spin_angle = 0.0
+	_whirlwind_hit_cooldown = 0.0
 	Audio.play_sword_swing()
 	FX.impact_burst(global_position + Vector3.UP * 1.0, Color(1.0, 0.5, 0.2), 16)
 
 
-func _hit_player(amount: float) -> void:
+func _hit_player(amount: float, knockback := 5.0) -> void:
 	if _player and _player.has_method("take_damage"):
-		_player.take_damage(amount, (global_position - _player.global_position).normalized())
+		_player.take_damage(amount, global_position, knockback)
 
 
-func take_damage(amount: float, hit_dir := Vector3.ZERO) -> void:
+func take_damage(amount: float, from_pos := Vector3.ZERO, knockback := 4.0) -> void:
 	if state == State.DEAD:
 		return
 
@@ -250,8 +265,24 @@ func take_damage(amount: float, hit_dir := Vector3.ZERO) -> void:
 		_die()
 	else:
 		state = State.STAGGER
-		_timer = 0.3
-		velocity = -hit_dir * 4.0
+		_timer = 0.35
+		var away := global_position - from_pos
+		away.y = 0.0
+		away = away.normalized() if away.length() > 0.01 else -global_basis.z
+		velocity = away * knockback
+
+
+func get_parried(from_pos: Vector3) -> void:
+	if state == State.DEAD:
+		return
+	state = State.STAGGER
+	_timer = 0.8
+	Audio.play_heavy_hit()
+	FX.sparks(global_position + Vector3.UP * 1.2, Vector3.UP, Color(0.3, 0.8, 1.0), 20)
+	var away := global_position - from_pos
+	away.y = 0.0
+	away = away.normalized() if away.length() > 0.01 else -global_basis.z
+	velocity = away * 5.0
 
 
 func _die() -> void:

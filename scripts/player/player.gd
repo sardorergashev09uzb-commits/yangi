@@ -493,6 +493,9 @@ func _start_attack(heavy: bool, index: int) -> void:
 
 
 func _attack_tick(delta: float) -> void:
+	if _attack.is_empty():
+		_end_attack()
+		return
 	_attack_time += delta
 	_buffer_light = maxf(_buffer_light - delta, 0.0)
 	_buffer_heavy = maxf(_buffer_heavy - delta, 0.0)
@@ -501,9 +504,9 @@ func _attack_tick(delta: float) -> void:
 	if Input.is_action_just_pressed("attack_heavy"):
 		_buffer_heavy = 0.4
 
-	var windup: float = _attack.windup
-	var active: float = _attack.active
-	var recover: float = _attack.recover
+	var windup: float = _attack.get("windup", 0.15)
+	var active: float = _attack.get("active", 0.15)
+	var recover: float = _attack.get("recover", 0.25)
 	var strike_end := windup + active
 	var total := strike_end + recover
 
@@ -517,7 +520,7 @@ func _attack_tick(delta: float) -> void:
 		return
 
 	# Vaqt oynasiga qarab harakat: tayyorlanish (to'xtash), zarba (oldinga siljish), tiklanish
-	var lunge: float = _attack.lunge
+	var lunge: float = _attack.get("lunge", 0.0)
 	if _attack_time >= windup and _attack_time < strike_end:
 		if not is_mounted:
 			velocity.x = _attack_dir.x * lunge
@@ -590,7 +593,8 @@ func _update_swing(windup: float, active: float, recover: float) -> void:
 		[Vector3(0, -80, 0), Vector3(0, 80, 0)],
 		[Vector3(110, 0, 0), Vector3(-40, 0, 0)],
 	]
-	var pose: Array = poses[_attack.swing]
+	var swing_idx: int = clampi(int(_attack.get("swing", 0)), 0, poses.size() - 1)
+	var pose: Array = poses[swing_idx]
 	var start: Vector3 = pose[0]
 	var end: Vector3 = pose[1]
 	if _attack_time < windup:
@@ -742,6 +746,9 @@ func take_damage(amount: float, from_pos: Vector3, knockback := 5.0) -> void:
 	away.y = 0.0
 	away = away.normalized() if away.length() > 0.01 else -model.global_basis.z
 	velocity = away * knockback
+	if is_mounted:
+		_hit_invuln = hurt_iframes
+		return
 	state = State.HURT
 	_hurt_timer = 0.3
 	_hit_invuln = hurt_iframes
@@ -754,6 +761,25 @@ func _hurt(delta: float) -> void:
 	velocity.y -= gravity * delta
 	if _hurt_timer <= 0.0:
 		state = State.NORMAL
+
+
+func respawn() -> void:
+	if is_mounted and mounted_horse != null:
+		mounted_horse.dismount()
+	global_position = _spawn
+	velocity = Vector3.ZERO
+	model.rotation = Vector3.ZERO
+	if rig:
+		rig.global_position = _spawn + Vector3.UP * rig.height
+		rig.yaw = 0.0
+		rig.pitch = deg_to_rad(-15.0)
+	health = max_health
+	stamina = max_stamina
+	_hit_invuln = 1.0
+	state = State.NORMAL
+	health_changed.emit(health, max_health)
+	stamina_changed.emit(stamina, max_stamina)
+	respawned.emit()
 
 
 func _die() -> void:
@@ -769,20 +795,8 @@ func _die() -> void:
 	died.emit()
 	# ignore_time_scale = true: sekinlashish yoki time_scale ta'sirida qotib qolmasligini ta'minlaydi
 	await get_tree().create_timer(1.8, true, false, true).timeout
-	global_position = _spawn
-	velocity = Vector3.ZERO
-	model.rotation = Vector3.ZERO
-	if rig:
-		rig.global_position = _spawn + Vector3.UP * rig.height
-		rig.yaw = 0.0
-		rig.pitch = deg_to_rad(-15.0)
-	health = max_health
-	stamina = max_stamina
-	_hit_invuln = 1.0
-	state = State.NORMAL
-	health_changed.emit(health, max_health)
-	stamina_changed.emit(stamina, max_stamina)
-	respawned.emit()
+	if state == State.DEAD:
+		respawn()
 
 
 # ---------------------------------------------------------------- Yordamchi
