@@ -61,7 +61,12 @@ func collect_state() -> Dictionary:
 		data["player"] = {
 			"pos": [pos.x, pos.y, pos.z],
 			"health": player.health,
-			"gold": int(player.get("gold")) if player.get("gold") != null else 0
+			"gold": int(player.get("gold")) if player.get("gold") != null else 0,
+			"steel_sword": bool(player.get("is_steel_sword_equipped")),
+			"plate_armor": bool(player.get("is_plate_armor_equipped")),
+			"horseshoes": bool(player.get("has_golden_horseshoes")),
+			"fire_arrows": int(player.get("fire_arrows_count")),
+			"piercing_arrows": int(player.get("piercing_arrows_count"))
 		}
 	var opened_chests: Array[String] = []
 	for chest in get_tree().get_nodes_in_group("treasure_chests"):
@@ -140,6 +145,16 @@ func apply_state(data: Dictionary) -> void:
 			player.set("gold", g)
 			if player.has_signal("gold_changed"):
 				player.emit_signal("gold_changed", g, 0)
+		if pd.get("steel_sword", false) and player.has_method("upgrade_sword"):
+			player.upgrade_sword()
+		if pd.get("plate_armor", false) and player.has_method("upgrade_armor"):
+			player.upgrade_armor()
+		if pd.get("horseshoes", false):
+			player.set("has_golden_horseshoes", true)
+		if pd.has("fire_arrows"):
+			player.set("fire_arrows_count", int(pd["fire_arrows"]))
+		if pd.has("piercing_arrows"):
+			player.set("piercing_arrows_count", int(pd["piercing_arrows"]))
 		player.health_changed.emit(player.health, player.max_health)
 		player.stamina_changed.emit(player.stamina, player.max_stamina)
 		if player.rig:

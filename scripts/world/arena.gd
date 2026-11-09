@@ -18,6 +18,7 @@ const DungeonAreaScript = preload("res://scripts/world/dungeon_area.gd")
 const DayNightCycleScript = preload("res://scripts/world/day_night_cycle.gd")
 const MainMenuScript = preload("res://scripts/ui/main_menu.gd")
 const TreasureChestScript = preload("res://scripts/world/treasure_chest.gd")
+const ShopMenuScript = preload("res://scripts/ui/shop_menu.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -51,6 +52,11 @@ func _ready() -> void:
 	var dbox = DialogBoxScript.new()
 	dbox.add_to_group("dialog_box")
 	add_child(dbox)
+
+	# Savdo va Do'kon tizimi
+	var shop_menu := ShopMenuScript.new()
+	shop_menu.add_to_group("shop_menu")
+	add_child(shop_menu)
 
 	# Yagona yaxlit ulkan Boysun dashti zamini: Shimoldagi Zindon va Qal'agacha to'liq cho'zilgan
 	_box(Vector3(0, -1.0, -50), Vector3(500, 2.0, 500), Color(0.42, 0.45, 0.28))
@@ -89,6 +95,9 @@ func _ready() -> void:
 
 	# Boysun elining o'tovlari va Qultoy Cho'pon manzilgohi
 	_build_yurt_village()
+
+	# Chorsu Bozori (Usta Temirchi va Savdogar Karvonboshi)
+	_build_chorsu_market()
 
 	# Boychibor tulpori (o'yinchi va o'tov yonida o'tlab turadi)
 	_horse = HorseScript.new()
@@ -157,6 +166,76 @@ func _build_yurt_village() -> void:
 	flag.position = Vector3(0, 3.8, 0.65)
 	pole.add_child(flag)
 	add_child(pole)
+
+
+func _build_chorsu_market() -> void:
+	# Chorsu bozori maydonchasi (Stone plaza base & red carpet)
+	_box(Vector3(28.0, 0.015, 8.0), Vector3(18.0, 0.02, 12.0), Color(0.48, 0.44, 0.38))
+	_box(Vector3(28.0, 0.025, 8.0), Vector3(16.0, 0.01, 3.0), Color(0.65, 0.22, 0.18))
+
+	# 1. Usta Temirchi ustaxonasi (Blacksmith forge & anvil)
+	# Tosh pech (Forge furnace)
+	_box(Vector3(21.0, 0.9, 5.5), Vector3(2.4, 1.8, 2.0), Color(0.28, 0.26, 0.25))
+	# Qizigan ko'mir (Glowing embers)
+	_box(Vector3(21.0, 0.7, 6.2), Vector3(1.4, 0.4, 0.8), Color(0.95, 0.35, 0.1))
+	# Mo'ri (Chimney)
+	_box(Vector3(21.0, 2.4, 5.5), Vector3(1.0, 1.4, 1.0), Color(0.22, 0.20, 0.20))
+	# Olov nuri (Forge fire light)
+	var forge_light := OmniLight3D.new()
+	forge_light.position = Vector3(21.0, 1.2, 6.5)
+	forge_light.light_color = Color(1.0, 0.45, 0.15)
+	forge_light.light_energy = 2.2
+	forge_light.omni_range = 7.0
+	add_child(forge_light)
+
+	# Sanddon (Anvil on tree stump)
+	_box(Vector3(22.8, 0.35, 7.2), Vector3(0.65, 0.7, 0.65), Color(0.42, 0.28, 0.18))
+	_box(Vector3(22.8, 0.75, 7.2), Vector3(0.45, 0.2, 0.85), Color(0.18, 0.20, 0.22))
+	_box(Vector3(22.8, 0.8, 6.6), Vector3(0.2, 0.1, 0.4), Color(0.22, 0.24, 0.26))
+
+	# Qurol rastasi (Weapon rack with props)
+	_box(Vector3(24.5, 0.8, 5.5), Vector3(0.2, 1.6, 1.8), Color(0.38, 0.25, 0.15))
+	_box(Vector3(24.4, 0.8, 5.5), Vector3(0.05, 1.2, 0.3), Color(0.7, 0.75, 0.8))
+
+	# Usta Temirchi NPC
+	var blacksmith = NPCScript.new()
+	blacksmith.character_type = NPCScript.CharacterType.BLACKSMITH
+	blacksmith.character_name = "Usta Temirchi"
+	blacksmith.position = Vector3(22.8, 0.0, 8.6)
+	blacksmith.rotation_degrees.y = 180.0
+	add_child(blacksmith)
+
+	# 2. Savdogar Karvonboshi rastasi (Merchant stall & canopy)
+	# Yog'och peshtaxta (Wooden stall counter)
+	_box(Vector3(33.0, 0.45, 6.5), Vector3(3.2, 0.9, 1.2), Color(0.45, 0.30, 0.16))
+
+	# Soya-bon ustunlari (Canopy posts)
+	_box(Vector3(31.5, 1.3, 5.8), Vector3(0.12, 2.6, 0.12), Color(0.35, 0.22, 0.12))
+	_box(Vector3(34.5, 1.3, 5.8), Vector3(0.12, 2.6, 0.12), Color(0.35, 0.22, 0.12))
+	_box(Vector3(31.5, 1.15, 7.2), Vector3(0.12, 2.3, 0.12), Color(0.35, 0.22, 0.12))
+	_box(Vector3(34.5, 1.15, 7.2), Vector3(0.12, 2.3, 0.12), Color(0.35, 0.22, 0.12))
+
+	# Shohi chodir soyaboni (Canopy silk roof)
+	var canopy := _box(Vector3(33.0, 2.45, 6.5), Vector3(3.6, 0.08, 2.0), Color(0.8, 0.18, 0.18))
+	canopy.rotation_degrees.x = 10.0
+
+	# Peshtaxtadagi mollar (Qimiz ko'zasi, malham idishi, taqa)
+	_box(Vector3(32.2, 1.05, 6.5), Vector3(0.3, 0.4, 0.3), Color(0.75, 0.55, 0.35))
+	_box(Vector3(33.0, 0.98, 6.5), Vector3(0.35, 0.15, 0.35), Color(0.3, 0.6, 0.35))
+	_box(Vector3(33.8, 0.95, 6.5), Vector3(0.25, 0.08, 0.25), Color(0.95, 0.8, 0.2))
+
+	# Savdo qutilari va bochkalar (Crates & barrels)
+	_box(Vector3(31.6, 0.45, 5.0), Vector3(0.9, 0.9, 0.9), Color(0.5, 0.36, 0.22))
+	_box(Vector3(34.0, 0.4, 5.0), Vector3(1.1, 0.8, 1.0), Color(0.48, 0.34, 0.20))
+	_box(Vector3(31.6, 1.15, 5.0), Vector3(0.7, 0.6, 0.7), Color(0.52, 0.38, 0.24))
+
+	# Savdogar Karvonboshi NPC
+	var merchant = NPCScript.new()
+	merchant.character_type = NPCScript.CharacterType.MERCHANT
+	merchant.character_name = "Savdogar Karvonboshi"
+	merchant.position = Vector3(33.0, 0.0, 8.5)
+	merchant.rotation_degrees.y = 180.0
+	add_child(merchant)
 
 
 func _build_steppe() -> void:

@@ -59,6 +59,16 @@ var is_mounted := false
 var mounted_horse: Node3D = null
 var gold: int = 0
 
+# 2-Bosqich: Savdo va qurol-yarog' anjomlari
+var sword_damage_bonus: float = 0.0
+var damage_reduction: float = 0.0
+var fire_arrows_count: int = 0
+var piercing_arrows_count: int = 0
+var has_golden_horseshoes: bool = false
+var qimiz_buff_timer: float = 0.0
+var is_steel_sword_equipped: bool = false
+var is_plate_armor_equipped: bool = false
+
 var invulnerable: bool:
 	get:
 		return _dodge_invuln or _hit_invuln > 0.0
@@ -331,6 +341,17 @@ func _fire_bow(charge: float) -> void:
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.get("unlocked_skills") and prog.unlocked_skills.get("bow_mastery", false):
 		base_dmg *= 1.4
+
+	# 2-Bosqich: Maxsus o'qlar sarfi va kuchi
+	if fire_arrows_count > 0:
+		fire_arrows_count -= 1
+		base_dmg += 18.0
+		FX.sparks(spawn, ray_dir, Color(1.0, 0.45, 0.1), 12)
+	elif piercing_arrows_count > 0:
+		piercing_arrows_count -= 1
+		base_dmg *= 1.4
+		FX.sparks(spawn, ray_dir, Color(0.9, 0.9, 1.0), 12)
+
 	arrow.damage = base_dmg
 	arrow.velocity = (target - spawn).normalized() * lerpf(36.0, 66.0, charge)
 
@@ -517,7 +538,7 @@ func _attack_tick(delta: float) -> void:
 
 
 func _check_hits() -> void:
-	var dmg: float = _attack.damage * GameSettings.get_mult("player_dmg")
+	var dmg: float = (_attack.damage + sword_damage_bonus) * GameSettings.get_mult("player_dmg")
 	if is_mounted and mounted_horse and mounted_horse.get("galloping"):
 		dmg *= 1.3  # Ot shiddatli chopganda qilich kuchi +30%
 	var prog = get_tree().get_first_node_in_group("progression")
@@ -693,6 +714,8 @@ func take_damage(amount: float, from_pos: Vector3, knockback := 5.0) -> void:
 	if invulnerable or state == State.DEAD:
 		return
 	amount = _try_block(amount, from_pos)
+	if damage_reduction > 0.0:
+		amount *= (1.0 - damage_reduction)
 	if amount <= 0.0:
 		return
 	health = maxf(health - amount, 0.0)
@@ -767,12 +790,19 @@ func _face(dir: Vector3, delta: float, instant := false) -> void:
 
 
 func _use_stamina(amount: float) -> void:
+	if qimiz_buff_timer > 0.0:
+		return
 	stamina = maxf(stamina - amount, 0.0)
 	_regen_timer = regen_delay
 	stamina_changed.emit(stamina, max_stamina)
 
 
 func _regen(delta: float) -> void:
+	if qimiz_buff_timer > 0.0:
+		qimiz_buff_timer -= delta
+		stamina = max_stamina
+		stamina_changed.emit(stamina, max_stamina)
+		return
 	if _regen_timer > 0.0:
 		_regen_timer -= delta
 		return
@@ -797,6 +827,64 @@ func spend_gold(amount: int) -> bool:
 		gold_changed.emit(gold, -amount)
 		return true
 	return false
+
+
+func upgrade_sword() -> void:
+	is_steel_sword_equipped = true
+	sword_damage_bonus = 25.0
+	_upgrade_sword_visuals()
+
+
+func upgrade_armor() -> void:
+	is_plate_armor_equipped = true
+	damage_reduction = 0.30
+	_upgrade_armor_visuals()
+
+
+func apply_qimiz_buff(duration := 35.0) -> void:
+	stamina = max_stamina
+	qimiz_buff_timer = duration
+	stamina_changed.emit(stamina, max_stamina)
+	Audio.play_level_up()
+	FX.popup(global_position + Vector3.UP * 2.2, 0.0, Color(0.3, 0.9, 1.0))
+
+
+func heal_hp(amount: float) -> void:
+	health = minf(health + amount, max_health)
+	health_changed.emit(health, max_health)
+	FX.popup(global_position + Vector3.UP * 2.2, amount, Color(0.2, 1.0, 0.4))
+
+
+func _upgrade_sword_visuals() -> void:
+	if weapon:
+		for child in weapon.get_children():
+			if child is MeshInstance3D:
+				var m := StandardMaterial3D.new()
+				m.albedo_color = Color(0.9, 0.95, 1.0)
+				m.metallic = 0.95
+				m.roughness = 0.15
+				m.emission_enabled = true
+				m.emission = Color(0.4, 0.7, 1.0)
+				m.emission_energy_multiplier = 0.35
+				child.material_override = m
+	FX.sparks(global_position + Vector3.UP * 1.2, Vector3.UP, Color(0.5, 0.85, 1.0), 16)
+
+
+func _upgrade_armor_visuals() -> void:
+	var armor_mesh := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.42
+	cyl.bottom_radius = 0.38
+	cyl.height = 0.75
+	var amat := StandardMaterial3D.new()
+	amat.albedo_color = Color(0.72, 0.75, 0.82)
+	amat.metallic = 0.92
+	amat.roughness = 0.25
+	armor_mesh.mesh = cyl
+	armor_mesh.material_override = amat
+	armor_mesh.position = Vector3(0, 1.15, 0)
+	model.add_child(armor_mesh)
+	FX.sparks(global_position + Vector3.UP * 1.0, Vector3.UP, Color(0.9, 0.8, 0.3), 16)
 
 
 func _try_mount_horse() -> void:

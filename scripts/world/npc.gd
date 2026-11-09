@@ -2,7 +2,7 @@ class_name NPC
 extends CharacterBody3D
 ## Doston qahramonlari NPC: Qultoy Cho'pon, Barchinoy va Karajon.
 
-enum CharacterType { QULTOY, BARCHIN, KARAJON }
+enum CharacterType { QULTOY, BARCHIN, KARAJON, BLACKSMITH, MERCHANT }
 
 @export var character_type := CharacterType.QULTOY
 @export var character_name := "Qultoy Cho'pon"
@@ -39,6 +39,14 @@ func _build_visuals() -> void:
 		# Karajon Alp sovuti (Qora po'lat va oltin kamar)
 		bmat.albedo_color = Color(0.18, 0.18, 0.22)
 		bmat.metallic = 0.8
+	elif character_type == CharacterType.BLACKSMITH:
+		# Usta Temirchi (Qoramtir charm fartuk va temir belbog')
+		bmat.albedo_color = Color(0.28, 0.18, 0.12)
+		bmat.roughness = 0.85
+	elif character_type == CharacterType.MERCHANT:
+		# Karvonboshi Savdogar (Momiq moviy-zarbof to'n)
+		bmat.albedo_color = Color(0.12, 0.42, 0.48)
+		bmat.roughness = 0.6
 
 	cyl.material = bmat
 	body_mi.mesh = cyl
@@ -95,7 +103,12 @@ func _build_visuals() -> void:
 
 func _build_prompt() -> void:
 	_prompt = Label3D.new()
-	_prompt.text = "%s\n[ E ] - Suhbatlashish" % character_name
+	if character_type == CharacterType.BLACKSMITH:
+		_prompt.text = "%s\n[ E ] - Qurol va Zirh Do'koni" % character_name
+	elif character_type == CharacterType.MERCHANT:
+		_prompt.text = "%s\n[ E ] - Mollarni Ko'rish" % character_name
+	else:
+		_prompt.text = "%s\n[ E ] - Suhbatlashish" % character_name
 	_prompt.font_size = 38
 	_prompt.position.y = 2.4
 	_prompt.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -117,6 +130,17 @@ func _physics_process(_delta: float) -> void:
 
 
 func interact() -> void:
+	if character_type == CharacterType.BLACKSMITH:
+		var shop = get_tree().get_first_node_in_group("shop_menu")
+		if shop and shop.has_method("open_shop"):
+			shop.open_shop("blacksmith")
+			return
+	elif character_type == CharacterType.MERCHANT:
+		var shop = get_tree().get_first_node_in_group("shop_menu")
+		if shop and shop.has_method("open_shop"):
+			shop.open_shop("merchant")
+			return
+
 	var dbox = get_tree().get_first_node_in_group("dialog_box")
 	if dbox == null:
 		return
