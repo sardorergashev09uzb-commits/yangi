@@ -213,6 +213,14 @@ func _sync_world(qs: Node) -> void:
 		var giant = arena.get("_giant")
 		if giant and is_instance_valid(giant):
 			giant.queue_free()
+	if qs.is_quest_completed("caravan"):
+		var caravan = arena.get("_caravan")
+		if caravan and is_instance_valid(caravan) and caravan.has_method("set_ambush_completed_silent"):
+			caravan.set_ambush_completed_silent()
+	if qs.is_quest_completed("bandit_outpost"):
+		var chief = arena.get("_bandit_chief")
+		if chief and is_instance_valid(chief):
+			chief.queue_free()
 
 
 func _autosave() -> void:

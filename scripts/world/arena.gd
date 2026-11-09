@@ -21,6 +21,8 @@ const TreasureChestScript = preload("res://scripts/world/treasure_chest.gd")
 const ShopMenuScript = preload("res://scripts/ui/shop_menu.gd")
 const CraftingMenuScript = preload("res://scripts/ui/crafting_menu.gd")
 const ResourceNodeScript = preload("res://scripts/world/resource_node.gd")
+const CamelCaravanScript = preload("res://scripts/world/camel_caravan.gd")
+const BanditChiefScript = preload("res://scripts/enemies/bandit_chief.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -35,6 +37,8 @@ var _enemy_spawns: Array[Dictionary] = []
 var _horse: CharacterBody3D
 var _giant: CharacterBody3D
 var _giant_spawn := Vector3(38, 0, 48)
+var _caravan: Node3D
+var _bandit_chief: CharacterBody3D
 
 
 func _ready() -> void:
@@ -122,6 +126,12 @@ func _ready() -> void:
 
 	# Tabiiy resurslar (Temir rudasi, Qora saksovul, Shifobaxsh giyohlar)
 	_build_resource_nodes()
+
+	# Buyuk Ipak Yo'li tuyalar karvoni
+	_build_camel_caravan()
+
+	# Sahro Qaroqchilari Istehkomi (Bandit Outpost)
+	_build_bandit_outpost()
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
@@ -714,5 +724,54 @@ func _spawn_resource_node(id: String, type_val: int, pos: Vector3, yield_amt: in
 	node.position = pos
 	add_child(node)
 	return node
+
+
+func _build_camel_caravan() -> void:
+	_caravan = CamelCaravanScript.new()
+	add_child(_caravan)
+
+
+func _build_bandit_outpost() -> void:
+	var outpost_center := Vector3(75.0, 0.0, 55.0)
+
+	# 1. Yog'och to'siqlar va devorlar (Palisades)
+	_box(Vector3(75.0, 1.1, 47.0), Vector3(14.0, 2.2, 0.4), Color(0.35, 0.22, 0.12)) # Shimoliy devor
+	_box(Vector3(68.0, 1.1, 55.0), Vector3(0.4, 2.2, 16.0), Color(0.35, 0.22, 0.12)) # G'arbiy devor
+	_box(Vector3(82.0, 1.1, 55.0), Vector3(0.4, 2.2, 16.0), Color(0.35, 0.22, 0.12)) # Sharqiy devor
+	# Janubiy darvoza
+	_box(Vector3(71.0, 1.3, 63.0), Vector3(5.0, 2.6, 0.4), Color(0.35, 0.22, 0.12))
+	_box(Vector3(79.0, 1.3, 63.0), Vector3(5.0, 2.6, 0.4), Color(0.35, 0.22, 0.12))
+
+	# 2. Qorovul minorasi (Watchtower)
+	_box(Vector3(79.0, 1.8, 51.0), Vector3(0.3, 3.6, 0.3), Color(0.32, 0.20, 0.10))
+	_box(Vector3(81.5, 1.8, 51.0), Vector3(0.3, 3.6, 0.3), Color(0.32, 0.20, 0.10))
+	_box(Vector3(79.0, 1.8, 53.5), Vector3(0.3, 3.6, 0.3), Color(0.32, 0.20, 0.10))
+	_box(Vector3(81.5, 1.8, 53.5), Vector3(0.3, 3.6, 0.3), Color(0.32, 0.20, 0.10))
+	# Minora maydonchasi
+	_box(Vector3(80.25, 3.6, 52.25), Vector3(3.2, 0.2, 3.2), Color(0.4, 0.26, 0.15))
+	# Minora qorovuli (Kamonchi)
+	_spawn_enemy(EnemyScript.Kind.ARCHER, Vector3(80.25, 3.8, 52.25))
+
+	# 3. Gulxan (Campfire with fire light)
+	_box(outpost_center, Vector3(1.6, 0.2, 1.6), Color(0.2, 0.18, 0.16))
+	_box(outpost_center + Vector3(0, 0.2, 0), Vector3(0.8, 0.3, 0.8), Color(0.9, 0.4, 0.1))
+	var fire_light := OmniLight3D.new()
+	fire_light.position = outpost_center + Vector3(0, 0.8, 0)
+	fire_light.light_color = Color(1.0, 0.5, 0.15)
+	fire_light.light_energy = 3.0
+	fire_light.omni_range = 10.0
+	add_child(fire_light)
+
+	# 4. Qarorgoh qorovuli (Qilichchi)
+	_spawn_enemy(EnemyScript.Kind.SWORD, Vector3(72.0, 0.0, 54.0))
+
+	# 5. Qaroqchilar Sardori (Bandit Chief Mini-Boss)
+	_bandit_chief = BanditChiefScript.new()
+	_bandit_chief.position = Vector3(75.0, 0.0, 56.5)
+	add_child(_bandit_chief)
+
+	# 6. O'g'irlangan Xazina Sandig'i
+	_spawn_chest("chest_bandit_outpost", Vector3(76.5, 0.0, 50.0), 85, -45.0)
+
 
 

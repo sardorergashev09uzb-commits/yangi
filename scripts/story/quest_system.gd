@@ -54,6 +54,22 @@ var quests: Dictionary = {
 		"hint": "Barchinoyni zindondan ozod qilish",
 		"completed": false,
 		"xp": 200
+	},
+	"caravan": {
+		"id": "caravan",
+		"title": "Karvonni himoya qilish",
+		"desc": "Dashtdagi Buyuk Ipak Yo'li tuyalar karvonini sahro qaroqchilari pistirmasidan qutqarish",
+		"hint": "Karvonni qaroqchilardan himoya qiling",
+		"completed": false,
+		"xp": 150
+	},
+	"bandit_outpost": {
+		"id": "bandit_outpost",
+		"title": "Qaroqchilar Istehkomi",
+		"desc": "Sharqiy tog' etagidagi Sahro Qaroqchilari qarorgohini tor-mor qilish va Sardorni yengish",
+		"hint": "Qaroqchilar Sardorini yengish",
+		"completed": false,
+		"xp": 160
 	}
 }
 
