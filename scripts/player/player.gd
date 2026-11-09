@@ -4,6 +4,7 @@ extends CharacterBody3D
 
 signal stamina_changed(current: float, maximum: float)
 signal health_changed(current: float, maximum: float)
+signal gold_changed(new_gold: int, delta_amount: int)
 signal died
 signal respawned
 
@@ -56,6 +57,7 @@ var aiming := false
 var bow_charge := 0.0
 var is_mounted := false
 var mounted_horse: Node3D = null
+var gold: int = 0
 
 var invulnerable: bool:
 	get:
@@ -777,6 +779,24 @@ func _regen(delta: float) -> void:
 	if stamina < max_stamina:
 		stamina = minf(stamina + stamina_regen * delta, max_stamina)
 		stamina_changed.emit(stamina, max_stamina)
+
+
+func add_gold(amount: int) -> void:
+	if amount <= 0:
+		return
+	gold += amount
+	gold_changed.emit(gold, amount)
+	Audio.play_coin()
+
+
+func spend_gold(amount: int) -> bool:
+	if amount <= 0:
+		return true
+	if gold >= amount:
+		gold -= amount
+		gold_changed.emit(gold, -amount)
+		return true
+	return false
 
 
 func _try_mount_horse() -> void:

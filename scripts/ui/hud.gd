@@ -33,6 +33,7 @@ var _banner_tween: Tween
 var _xp_bar: ProgressBar
 var _lvl_label: Label
 var _skill_hint: Label
+var _gold_label: Label
 
 # Kompas / Radar UI elementlari
 var _compass_container: PanelContainer
@@ -53,9 +54,16 @@ func _ready() -> void:
 	_lvl_label.add_theme_color_override("font_color", Color(0.9, 0.85, 1.0))
 	add_child(_lvl_label)
 
+	_gold_label = Label.new()
+	_gold_label.text = "🪙 0 Tilla"
+	_gold_label.position = Vector2(30, 72)
+	_gold_label.add_theme_font_size_override("font_size", 13)
+	_gold_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.25))
+	add_child(_gold_label)
+
 	_skill_hint = Label.new()
 	_skill_hint.text = "★ [ TAB ] - Yangi ko'nikma ochkosi!"
-	_skill_hint.position = Vector2(30, 70)
+	_skill_hint.position = Vector2(130, 72)
 	_skill_hint.add_theme_font_size_override("font_size", 13)
 	_skill_hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
 	_skill_hint.visible = false
@@ -294,6 +302,10 @@ func _connect_player() -> void:
 	_player.connect("health_changed", func(c: float, m: float) -> void:
 		_health_bar.max_value = m
 		_health_bar.value = c)
+	if _player.has_signal("gold_changed"):
+		_player.connect("gold_changed", _on_gold_changed)
+	if _player.get("gold") != null:
+		_gold_label.text = "🪙 %d Tilla" % int(_player.get("gold"))
 	_player.connect("died", func() -> void:
 		_death_panel.visible = true
 		_boss_container.visible = false
@@ -301,6 +313,27 @@ func _connect_player() -> void:
 	_player.connect("respawned", func() -> void:
 		_death_panel.visible = false
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED)
+
+
+func _on_gold_changed(new_gold: int, delta_amount: int) -> void:
+	_gold_label.text = "🪙 %d Tilla" % new_gold
+	if delta_amount > 0:
+		_show_gold_popup("+%d Tilla" % delta_amount)
+	elif delta_amount < 0:
+		_show_gold_popup("%d Tilla" % delta_amount, Color(1.0, 0.4, 0.3))
+
+
+func _show_gold_popup(text: String, col := Color(1.0, 0.88, 0.25)) -> void:
+	var popup := Label.new()
+	popup.text = text
+	popup.position = _gold_label.position + Vector2(100, 0)
+	popup.add_theme_font_size_override("font_size", 14)
+	popup.add_theme_color_override("font_color", col)
+	add_child(popup)
+	var t := create_tween()
+	t.tween_property(popup, "position:y", popup.position.y - 18.0, 0.8)
+	t.parallel().tween_property(popup, "modulate:a", 0.0, 0.8)
+	t.tween_callback(popup.queue_free)
 
 
 func _connect_boss() -> void:

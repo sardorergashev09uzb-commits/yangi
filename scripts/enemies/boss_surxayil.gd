@@ -5,6 +5,8 @@ extends CharacterBody3D
 ## - 1-bosqich: Og'ir zarbalar, keng aylanma sweep, va yerga zarba (shockwave to'lqini).
 ## - 2-bosqich (HP <= 50%): Quturgan holat (qizil yonish, tezlik oshishi, Bo'ron aylanmasi - Whirlwind).
 
+const CoinDropScript = preload("res://scripts/world/coin_drop.gd")
+
 signal boss_activated(boss_name: String, cur_hp: float, max_hp: float)
 signal boss_health_changed(cur_hp: float, max_hp: float, phase: int)
 signal boss_phase_transition(phase: int)
@@ -439,6 +441,9 @@ func _die() -> void:
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.has_method("add_xp"):
 		prog.add_xp(250)
+	# Surxayil Alp xazinasi: Katta sandiq miqdorida tilla tangalar
+	var coin_val := randi_range(180, 260)
+	CoinDropScript.spawn_coins(get_tree(), global_position + Vector3.UP * 1.0, coin_val, 10)
 
 	FX.hit_stop(0.25)
 	var t := create_tween()

@@ -4,6 +4,8 @@ extends CharacterBody3D
 ## Holatlar: IDLE -> CHASE -> WINDUP (ogohlantirish) -> STRIKE -> RECOVER, zarba yesa STAGGER.
 ## Hujum "tokeni": bir vaqtda faqat MAX_ATTACKERS ta yaqin jangchi hujum qiladi, qolganlari aylanib turadi.
 
+const CoinDropScript = preload("res://scripts/world/coin_drop.gd")
+
 signal died(enemy: Enemy)
 
 enum Kind { SWORD, SPEAR, ARCHER }
@@ -511,6 +513,9 @@ func _die() -> void:
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.has_method("add_xp"):
 		prog.add_xp(30)
+	# Tilla tangalar tushishi (Loot)
+	var coin_val := randi_range(6, 16)
+	CoinDropScript.spawn_coins(get_tree(), global_position + Vector3.UP * 0.5, coin_val, randi_range(2, 4))
 	await get_tree().create_timer(3.0).timeout
 	queue_free()
 

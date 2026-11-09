@@ -6,6 +6,8 @@ extends CharacterBody3D
 ## - Uzoqdan tosh uloqtirish (Rock Throw)
 ## - Yaqinda qadam larzasi (Stomp)
 
+const CoinDropScript = preload("res://scripts/world/coin_drop.gd")
+
 enum State { IDLE, CHASE, THROW, STOMP, STAGGER, DEAD }
 
 @export var max_health := 180.0
@@ -282,6 +284,9 @@ func _die() -> void:
 	var prog = get_tree().get_first_node_in_group("progression")
 	if prog and prog.has_method("add_xp"):
 		prog.add_xp(90)
+	# Dev xazinasi: Katta miqdorda tilla tangalar
+	var coin_val := randi_range(60, 95)
+	CoinDropScript.spawn_coins(get_tree(), global_position + Vector3.UP * 1.0, coin_val, 6)
 	var t := create_tween()
 	t.tween_property(_body, "rotation:x", -PI / 2.0, 0.6)
 	t.parallel().tween_property(_body, "position:y", 0.8, 0.6)

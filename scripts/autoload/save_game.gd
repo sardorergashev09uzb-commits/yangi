@@ -58,7 +58,16 @@ func collect_state() -> Dictionary:
 	var player = get_tree().get_first_node_in_group("player")
 	if player:
 		var pos: Vector3 = player.global_position
-		data["player"] = {"pos": [pos.x, pos.y, pos.z], "health": player.health}
+		data["player"] = {
+			"pos": [pos.x, pos.y, pos.z],
+			"health": player.health,
+			"gold": int(player.get("gold")) if player.get("gold") != null else 0
+		}
+	var opened_chests: Array[String] = []
+	for chest in get_tree().get_nodes_in_group("treasure_chests"):
+		if chest and chest.get("is_opened") and chest.get("chest_id") != "":
+			opened_chests.append(String(chest.get("chest_id")))
+	data["chests"] = opened_chests
 	return data
 
 
@@ -126,10 +135,22 @@ func apply_state(data: Dictionary) -> void:
 		player.velocity = Vector3.ZERO
 		player.health = clampf(float(pd.get("health", player.max_health)), 1.0, player.max_health)
 		player.stamina = player.max_stamina
+		if pd.has("gold"):
+			var g := int(pd["gold"])
+			player.set("gold", g)
+			if player.has_signal("gold_changed"):
+				player.emit_signal("gold_changed", g, 0)
 		player.health_changed.emit(player.health, player.max_health)
 		player.stamina_changed.emit(player.stamina, player.max_stamina)
 		if player.rig:
 			player.rig.global_position = player.global_position + Vector3.UP * player.rig.height
+
+	if data.has("chests"):
+		var opened: Array = data["chests"]
+		for chest in get_tree().get_nodes_in_group("treasure_chests"):
+			if chest and chest.get("chest_id") in opened:
+				if chest.has_method("set_opened_silent"):
+					chest.set_opened_silent()
 
 
 ## Yengilgan dushmanlar dunyoda qayta paydo bo'lmasligi uchun

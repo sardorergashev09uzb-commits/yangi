@@ -17,6 +17,7 @@ const DungeonGateScript = preload("res://scripts/world/dungeon_gate.gd")
 const DungeonAreaScript = preload("res://scripts/world/dungeon_area.gd")
 const DayNightCycleScript = preload("res://scripts/world/day_night_cycle.gd")
 const MainMenuScript = preload("res://scripts/ui/main_menu.gd")
+const TreasureChestScript = preload("res://scripts/world/treasure_chest.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -99,6 +100,9 @@ func _ready() -> void:
 
 	# Surxayil Boss Arenasi (Shimolda, Z = -60 dan -105 gacha)
 	_build_boss_arena()
+
+	# Qadimiy xazina sandiqlari (Loot & Economy)
+	_build_treasure_chests()
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
@@ -566,4 +570,31 @@ func _check_void_safety() -> void:
 	if _horse and is_instance_valid(_horse) and _horse.global_position.y < -3.0:
 		_horse.global_position = Vector3(6.0, 0.5, 4.0)
 		_horse.velocity = Vector3.ZERO
+
+
+func _build_treasure_chests() -> void:
+	# 1. Mashg'ulot tosh maydoni sandig'i
+	_spawn_chest("chest_training", Vector3(11.0, 0.0, -5.0), 35, 15.0)
+
+	# 2. Qultoy o'tovi orqasidagi sandiq
+	_spawn_chest("chest_yurt", Vector3(22.0, 0.0, 12.0), 45, -45.0)
+
+	# 3. Dasht qoyalari xazinasi
+	_spawn_chest("chest_steppe", Vector3(36.0, 0.0, 34.0), 60, 30.0)
+
+	# 4. Surxayil Arenasi darvozasi oldi
+	_spawn_chest("chest_arena", Vector3(-11.0, 0.0, -56.0), 75, -90.0)
+
+	# 5. Zindon ko'prigi boshidagi qo'riqchilar sandig'i
+	_spawn_chest("chest_bridge", Vector3(6.5, 0.25, -110.0), 90, 180.0)
+
+
+func _spawn_chest(id: String, pos: Vector3, gold: int, rot_y_deg := 0.0) -> Node3D:
+	var chest = TreasureChestScript.new()
+	chest.chest_id = id
+	chest.gold_amount = gold
+	chest.position = pos
+	chest.rotation_degrees.y = rot_y_deg
+	add_child(chest)
+	return chest
 

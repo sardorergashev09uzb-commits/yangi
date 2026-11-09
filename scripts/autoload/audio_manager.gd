@@ -45,6 +45,8 @@ func _generate_all_sounds() -> void:
 	_streams["boss_slam"] = _gen_sub_slam()
 	_streams["level_up"] = _gen_arpeggio([293.66, 349.23, 392.0, 440.0, 587.33], 0.12) # D, F, G, A, D5
 	_streams["victory"] = _gen_arpeggio([220.0, 293.66, 369.99, 440.0, 587.33, 739.99], 0.18)
+	_streams["coin"] = _gen_arpeggio([987.77, 1318.51, 1975.53], 0.05) # Tilla tanga jaranglashi
+	_streams["chest"] = _gen_arpeggio([329.63, 440.0, 659.25, 880.0], 0.08) # Xazina ochilishi
 	_streams["doyra_gum"] = _gen_doyra_gum()
 	_streams["doyra_bak"] = _gen_doyra_bak()
 
@@ -194,6 +196,14 @@ func play_boss_slam() -> void:
 
 func play_victory() -> void:
 	play_sfx("victory", 1.0, 4.0)
+
+
+func play_coin() -> void:
+	play_sfx("coin", randf_range(0.95, 1.08), 2.0)
+
+
+func play_chest() -> void:
+	play_sfx("chest", 1.0, 3.0)
 
 
 # ---------------------------------------------------------------- To'lqin generatorlari (PCM 16-bit)
