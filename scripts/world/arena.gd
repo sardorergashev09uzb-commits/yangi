@@ -33,6 +33,7 @@ const MirageDesertScript = preload("res://scripts/world/mirage_desert.gd")
 const BossDragonScript = preload("res://scripts/enemies/boss_dragon.gd")
 const BossShamanScript = preload("res://scripts/enemies/boss_shaman.gd")
 const BossColossusScript = preload("res://scripts/enemies/boss_colossus.gd")
+const SiegeBattleScript = preload("res://scripts/world/siege_battle.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -56,6 +57,7 @@ var _shaman: CharacterBody3D
 var _shaman_spawn := Vector3(-75, 1.2, 58)
 var _colossus: CharacterBody3D
 var _colossus_spawn := Vector3(75, 0.2, 110)
+var _siege_battle: Node3D
 
 
 func _ready() -> void:
@@ -172,6 +174,9 @@ func _ready() -> void:
 
 	# 7-bosqich: Yangi Mifologik Bosslar (Yetti Boshli Qora Ajdaho, Qalmoq Bosh Shomoni, Tosh Koloss)
 	_spawn_mythic_bosses()
+
+	# 9-bosqich: Qalmoq Qal'asi Katta Qamali (Epic Siege Battle)
+	_build_siege_battle()
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
@@ -917,6 +922,14 @@ func _spawn_ancient_balbal(id: String, bname: String, pos: Vector3, rot_y: float
 	balbal.rotation_degrees.y = rot_y
 	add_child(balbal)
 	return balbal
+
+
+func _build_siege_battle() -> void:
+	_siege_battle = SiegeBattleScript.new()
+	_siege_battle.name = "SiegeBattle"
+	_siege_battle.position = Vector3(0, 0, -115)
+	add_child(_siege_battle)
+
 
 
 
