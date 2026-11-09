@@ -70,6 +70,19 @@ var qimiz_buff_timer: float = 0.0
 var is_steel_sword_equipped: bool = false
 var is_plate_armor_equipped: bool = false
 
+# 4 & 5-Bosqich: Qahramon ko'rinishi va afsonaviy mahoratlar (Dubulg'a, Qalqon, Yopinchiq, Simurg' Qanotlari)
+var is_gliding: bool = false
+var _battle_cry_cooldown: float = 0.0
+var _battle_cry_buff_timer: float = 0.0
+const BATTLE_CRY_COOLDOWN := 10.0
+const BATTLE_CRY_COST := 25.0
+
+var _helmet: Node3D
+var _cape_pivot: Node3D
+var _shield: Node3D
+var _pauldrons: Node3D
+var _simurgh_wings: Node3D
+
 # 3-Bosqich: Resurslar va Hunarmandchilik
 var iron_ore: int = 0
 var wood: int = 0
@@ -132,6 +145,7 @@ func _ready() -> void:
 	max_slides = 6
 
 	_build_bow_visuals()
+	_build_hero_visuals()
 
 
 func _physics_process(delta: float) -> void:
@@ -140,6 +154,7 @@ func _physics_process(delta: float) -> void:
 		model.visible = int(_hit_invuln * 20.0) % 2 == 0 or _hit_invuln <= 0.0
 
 	_update_bow_visuals()
+	_update_hero_visuals(delta)
 
 	# Cheksizlikka qulashdan qat'iy himoya (Void Fall Protection - otda bo'lsa ham ishlaydi)
 	if global_position.y < -3.0 and state != State.DEAD:
@@ -255,11 +270,21 @@ func _normal(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, target_vel.z, accel * delta)
 
 	if is_on_floor():
+		is_gliding = false
 		if Input.is_action_just_pressed("jump") and not aiming:
 			velocity.y = jump_velocity
 			Audio.play_jump()
 	else:
-		velocity.y -= gravity * delta
+		# Simurg' Qanotlari (Gliding): Havoda jump bosib turilsa sekin sho'ng'iydi
+		if Input.is_action_pressed("jump") and velocity.y < 0.5:
+			is_gliding = true
+			velocity.y = maxf(velocity.y - (gravity * 0.25) * delta, -2.0)
+			var glide_vel := dir * (sprint_speed * 1.05)
+			velocity.x = move_toward(velocity.x, glide_vel.x, ground_accel * delta)
+			velocity.z = move_toward(velocity.z, glide_vel.z, ground_accel * delta)
+		else:
+			is_gliding = false
+			velocity.y -= gravity * delta
 
 	# Yuzlanish faqat sichqoncha (kamera) bilan boshqariladi; WASD faqat harakat.
 	_face(_cam_forward(), delta, aiming)
@@ -283,13 +308,26 @@ func _normal(delta: float) -> void:
 	_special_cooldown_timer = maxf(_special_cooldown_timer - delta, 0.0)
 
 	# 13-bosqich: Maxsus qobiliyat - Alp Gumburi [ C ]
-	if Input.is_action_just_pressed("skill_special") and not aiming and is_on_floor() 			and stamina >= SPECIAL_STAMINA_COST and _special_cooldown_timer <= 0.0:
+	if Input.is_action_just_pressed("skill_special") and not aiming and is_on_floor() \
+			and stamina >= SPECIAL_STAMINA_COST and _special_cooldown_timer <= 0.0:
 		_start_special_earthquake()
 		return
 
+	# 5-bosqich: Afsonaviy Jangovar Hayqiriq [ V ] (Bo'ron Hayqirig'i)
+	if Input.is_action_just_pressed("battle_cry") and not aiming and is_on_floor() \
+			and stamina >= BATTLE_CRY_COST and _battle_cry_cooldown <= 0.0:
+		_execute_battle_cry()
+		return
+
 	if aiming:
+		# Merganlik fokusi (Slo-mo focus)
+		if stamina > 6.0 and not FX._stopping:
+			Engine.time_scale = 0.4
+			_use_stamina(6.0 * delta)
 		_bow(delta)
 	else:
+		if Engine.time_scale != 1.0 and not FX._stopping:
+			Engine.time_scale = 1.0
 		_cancel_bow()
 		if is_on_floor():
 			if Input.is_action_just_pressed("attack_light"):
@@ -472,6 +510,230 @@ func _update_bow_visuals() -> void:
 		_bow_arrow_mesh.visible = false
 
 
+# ---------------------------------------------------------------- Qahramon ko'rinishi va mahoratlari
+
+func _build_hero_visuals() -> void:
+	# 1. Dubulg'a (Turkiy jangchi konussimon po'lat dubulg'asi)
+	_helmet = Node3D.new()
+	_helmet.name = "AlpomishHelmet"
+	_helmet.position = Vector3(0, 1.80, 0)
+	model.add_child(_helmet)
+
+	var steel_mat := StandardMaterial3D.new()
+	steel_mat.albedo_color = Color(0.24, 0.27, 0.32)
+	steel_mat.metallic = 0.9
+	steel_mat.roughness = 0.25
+
+	var gold_trim_mat := StandardMaterial3D.new()
+	gold_trim_mat.albedo_color = Color(0.88, 0.72, 0.22)
+	gold_trim_mat.metallic = 0.92
+	gold_trim_mat.roughness = 0.3
+
+	var plume_mat := StandardMaterial3D.new()
+	plume_mat.albedo_color = Color(0.85, 0.12, 0.18)
+	plume_mat.roughness = 0.8
+
+	# Konussimon gumbaz
+	var dome := MeshInstance3D.new()
+	var dome_cyl := CylinderMesh.new()
+	dome_cyl.top_radius = 0.02
+	dome_cyl.bottom_radius = 0.37
+	dome_cyl.height = 0.38
+	dome.mesh = dome_cyl
+	dome.material_override = steel_mat
+	dome.position = Vector3(0, 0.05, 0)
+	_helmet.add_child(dome)
+
+	# Peshona tilla halqasi
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.35
+	torus.outer_radius = 0.385
+	ring.mesh = torus
+	ring.material_override = gold_trim_mat
+	ring.position = Vector3(0, -0.12, 0)
+	_helmet.add_child(ring)
+
+	# Dubulg'a uchi nayzasi va qizil popuk (sarvigul/tug')
+	var spike := MeshInstance3D.new()
+	var scyl := CylinderMesh.new()
+	scyl.top_radius = 0.005
+	scyl.bottom_radius = 0.02
+	scyl.height = 0.18
+	spike.mesh = scyl
+	spike.material_override = gold_trim_mat
+	spike.position = Vector3(0, 0.28, 0)
+	_helmet.add_child(spike)
+
+	var plume := MeshInstance3D.new()
+	var pmesh := SphereMesh.new()
+	pmesh.radius = 0.08
+	pmesh.height = 0.24
+	plume.mesh = pmesh
+	plume.material_override = plume_mat
+	plume.position = Vector3(0, 0.36, -0.05)
+	_helmet.add_child(plume)
+
+	# Burunlik (Nose guard)
+	var nose_guard := MeshInstance3D.new()
+	var ng_box := BoxMesh.new()
+	ng_box.size = Vector3(0.04, 0.22, 0.08)
+	nose_guard.mesh = ng_box
+	nose_guard.material_override = steel_mat
+	nose_guard.position = Vector3(0, -0.12, -0.38)
+	_helmet.add_child(nose_guard)
+
+	# 2. Yelkadoshlar (Pauldrons)
+	_pauldrons = Node3D.new()
+	_pauldrons.name = "AlpomishPauldrons"
+	model.add_child(_pauldrons)
+
+	for side in [-1.0, 1.0]:
+		var pauldron := MeshInstance3D.new()
+		var pbox := BoxMesh.new()
+		pbox.size = Vector3(0.24, 0.14, 0.36)
+		pauldron.mesh = pbox
+		pauldron.material_override = steel_mat
+		pauldron.position = Vector3(side * 0.44, 1.54, 0.0)
+		pauldron.rotation_degrees.z = side * 18.0
+		_pauldrons.add_child(pauldron)
+
+	# 3. Yopinchiq (Flowing Crimson Cape)
+	_cape_pivot = Node3D.new()
+	_cape_pivot.name = "AlpomishCapePivot"
+	_cape_pivot.position = Vector3(0, 1.48, 0.32)
+	model.add_child(_cape_pivot)
+
+	var cape_mesh_inst := MeshInstance3D.new()
+	var cbox := BoxMesh.new()
+	cbox.size = Vector3(0.74, 1.25, 0.03)
+	cape_mesh_inst.mesh = cbox
+	var cape_mat := StandardMaterial3D.new()
+	cape_mat.albedo_color = Color(0.72, 0.12, 0.18)
+	cape_mat.roughness = 0.85
+	cape_mesh_inst.material_override = cape_mat
+	cape_mesh_inst.position = Vector3(0, -0.6, 0)
+	_cape_pivot.add_child(cape_mesh_inst)
+
+	# 4. Sayyor Qalqon (Nomad Round Shield - Chap qo'lda)
+	_shield = Node3D.new()
+	_shield.name = "AlpomishShield"
+	_shield.position = Vector3(-0.44, 1.1, -0.05)
+	_shield.rotation_degrees.y = 80.0
+	model.add_child(_shield)
+
+	var shield_body := MeshInstance3D.new()
+	var scyl_mesh := CylinderMesh.new()
+	scyl_mesh.top_radius = 0.36
+	scyl_mesh.bottom_radius = 0.36
+	scyl_mesh.height = 0.05
+	shield_body.mesh = scyl_mesh
+	var shield_mat := StandardMaterial3D.new()
+	shield_mat.albedo_color = Color(0.26, 0.18, 0.12)
+	shield_body.material_override = shield_mat
+	shield_body.rotation_degrees.x = 90.0
+	_shield.add_child(shield_body)
+
+	var shield_rim := MeshInstance3D.new()
+	var s_torus := TorusMesh.new()
+	s_torus.inner_radius = 0.34
+	s_torus.outer_radius = 0.375
+	shield_rim.mesh = s_torus
+	shield_rim.material_override = gold_trim_mat
+	shield_rim.rotation_degrees.x = 90.0
+	_shield.add_child(shield_rim)
+
+	var umbo := MeshInstance3D.new()
+	var umbo_mesh := SphereMesh.new()
+	umbo_mesh.radius = 0.11
+	umbo_mesh.height = 0.12
+	umbo.mesh = umbo_mesh
+	umbo.material_override = gold_trim_mat
+	umbo.position = Vector3(0, 0, -0.04)
+	_shield.add_child(umbo)
+
+	# 5. Afsonaviy Simurg' Qanotlari (Parvoz vaqtida nurlanadi)
+	_simurgh_wings = Node3D.new()
+	_simurgh_wings.name = "SimurghWings"
+	_simurgh_wings.position = Vector3(0, 1.45, 0.30)
+	model.add_child(_simurgh_wings)
+
+	var wing_mat := StandardMaterial3D.new()
+	wing_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	wing_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	wing_mat.albedo_color = Color(1.0, 0.75, 0.18, 0.82)
+
+	for side in [-1.0, 1.0]:
+		var wing := MeshInstance3D.new()
+		var pmesh_w := BoxMesh.new()
+		pmesh_w.size = Vector3(1.3, 0.38, 0.04)
+		wing.mesh = pmesh_w
+		wing.material_override = wing_mat
+		wing.position = Vector3(side * 0.75, 0.32, 0.0)
+		wing.rotation_degrees = Vector3(0.0, side * 22.0, side * 32.0)
+		_simurgh_wings.add_child(wing)
+
+	_simurgh_wings.visible = false
+
+
+func _update_hero_visuals(delta: float) -> void:
+	# Yopinchiq tebranishi (Cape dynamic flutter & wind)
+	if _cape_pivot:
+		var horiz_vel := Vector2(velocity.x, velocity.z).length()
+		var flutter := sin(Time.get_ticks_msec() * 0.012) * 0.05
+		var target_rot_x := -clampf(horiz_vel * 0.055, 0.0, 0.72) + flutter
+		if is_gliding:
+			target_rot_x = -0.55 + flutter
+		_cape_pivot.rotation.x = lerpf(_cape_pivot.rotation.x, target_rot_x, 10.0 * delta)
+
+	# Qalqon holati (Shield active block position)
+	if _shield:
+		var target_rot_y := deg_to_rad(15.0) if is_blocking else deg_to_rad(80.0)
+		var target_pos := Vector3(-0.25, 1.15, -0.45) if is_blocking else Vector3(-0.44, 1.1, -0.05)
+		_shield.rotation.y = lerp_angle(_shield.rotation.y, target_rot_y, 14.0 * delta)
+		_shield.position = _shield.position.lerp(target_pos, 14.0 * delta)
+
+	# Simurg' qanotlari parvozi va nurlanishi
+	if _simurgh_wings:
+		_simurgh_wings.visible = is_gliding
+		if is_gliding:
+			var flap := sin(Time.get_ticks_msec() * 0.015) * 0.18
+			_simurgh_wings.scale = Vector3(1.0 + flap * 0.5, 1.0 + flap, 1.0)
+			if randf() < 0.2:
+				FX.sparks(global_position + Vector3(0, 1.2, 0.3), Vector3.UP, Color(1.0, 0.8, 0.2), 3)
+
+	# Bo'ron Hayqirig'i cooldown va buff vaqtlari
+	if _battle_cry_cooldown > 0.0:
+		_battle_cry_cooldown = maxf(_battle_cry_cooldown - delta, 0.0)
+	if _battle_cry_buff_timer > 0.0:
+		_battle_cry_buff_timer = maxf(_battle_cry_buff_timer - delta, 0.0)
+		if randf() < 0.15:
+			FX.sparks(global_position + Vector3(randf_range(-0.4, 0.4), 1.0, randf_range(-0.4, 0.4)), Vector3.UP, Color(1.0, 0.7, 0.1), 2)
+
+
+func _execute_battle_cry() -> void:
+	if _battle_cry_cooldown > 0.0 or stamina < BATTLE_CRY_COST:
+		return
+	_use_stamina(BATTLE_CRY_COST)
+	_battle_cry_cooldown = BATTLE_CRY_COOLDOWN
+	_battle_cry_buff_timer = 10.0
+
+	Audio.play_boss_slam()
+	rig.shake(0.35)
+	FX.hit_stop(0.06)
+	FX.shockwave_ring(global_position + Vector3.UP * 0.15, 9.5, Color(1.0, 0.75, 0.15, 0.9), 0.5)
+	FX.sparks(global_position + Vector3.UP * 1.2, Vector3.UP, Color(1.0, 0.85, 0.3), 32)
+	FX.popup(global_position + Vector3.UP * 2.3, 0.0, Color(1.0, 0.85, 0.2))
+
+	for e in get_tree().get_nodes_in_group("hurtable"):
+		if e != self and is_instance_valid(e) and e.has_method("take_damage"):
+			var dist := global_position.distance_to(e.global_position)
+			if dist <= 9.5:
+				e.take_damage(28.0 * GameSettings.get_mult("player_dmg"), global_position, 10.0)
+				if e.has_method("get_parried"):
+					e.get_parried(global_position)
+
+
 # ---------------------------------------------------------------- Yaqin jang
 
 func _start_attack(heavy: bool, index: int) -> void:
@@ -532,7 +794,7 @@ func _attack_tick(delta: float) -> void:
 			velocity.z = move_toward(velocity.z, 0.0, 40.0 * delta)
 	velocity.y -= gravity * delta
 
-	_update_swing(windup, active, recover)
+	_update_swing(windup, active, recover, delta)
 
 	# Kombo yoki og'ir zarbaga o'tish (tiklanishning boshlanishidan keyin)
 	if _attack_time >= strike_end + recover * 0.3:
@@ -550,6 +812,8 @@ func _attack_tick(delta: float) -> void:
 
 func _check_hits() -> void:
 	var dmg: float = (_attack.damage + sword_damage_bonus) * GameSettings.get_mult("player_dmg")
+	if _battle_cry_buff_timer > 0.0:
+		dmg *= 1.4  # Alp G'ayrati buffi: +40% kuch
 	if is_mounted and mounted_horse and mounted_horse.get("galloping"):
 		dmg *= 1.3  # Ot shiddatli chopganda qilich kuchi +30%
 	var prog = get_tree().get_first_node_in_group("progression")
@@ -587,7 +851,7 @@ func _end_attack() -> void:
 	weapon.rotation_degrees = Vector3.ZERO
 
 
-func _update_swing(windup: float, active: float, recover: float) -> void:
+func _update_swing(windup: float, active: float, recover: float, delta: float = 0.016) -> void:
 	var poses := [
 		[Vector3(0, 80, 0), Vector3(0, -80, 0)],
 		[Vector3(0, -80, 0), Vector3(0, 80, 0)],
@@ -597,6 +861,15 @@ func _update_swing(windup: float, active: float, recover: float) -> void:
 	var pose: Array = poses[swing_idx]
 	var start: Vector3 = pose[0]
 	var end: Vector3 = pose[1]
+
+	# Zarbani kesuvchi nur effekti (Slash Arc VFX)
+	if _attack_time >= windup and (_attack_time - delta) < windup:
+		var slash_pos := global_position + Vector3(0, 1.15, 0) - model.global_basis.z * 0.95
+		var slash_rot := model.rotation
+		if swing_idx == 2:
+			slash_rot.x = deg_to_rad(65.0)
+		FX.slash_arc(slash_pos, slash_rot, Color(0.9, 0.95, 1.0, 0.85) if not _attack_heavy else Color(1.0, 0.65, 0.2, 0.95), 1.45 if _attack_heavy else 1.15)
+
 	if _attack_time < windup:
 		weapon.rotation_degrees = Vector3.ZERO.lerp(start, _attack_time / windup)
 	elif _attack_time < windup + active:
@@ -654,19 +927,20 @@ func _try_block(amount: float, from_pos: Vector3) -> float:
 		return amount
 	var spark_pos := global_position + Vector3(0, 1.1, 0) + (from_pos - global_position).normalized() * 0.6
 	if _block_time <= PARRY_WINDOW:
-		# Mukammal parry: zarar yo'q, hujum qilgan dushman larzaga tushadi
+		# Mukammal parry: zarar yo'q, dushman larzaga tushadi va ko'k chaqnash
 		FX.hit_stop(0.12)
-		FX.sparks(spark_pos, Vector3.UP, Color(0.5, 0.9, 1.0), 22)
-		FX.popup(global_position + Vector3.UP * 2.3, 0.0, Color(0.5, 0.9, 1.0))
+		FX.parry_burst(spark_pos)
+		FX.popup(global_position + Vector3.UP * 2.3, 0.0, Color(0.4, 0.9, 1.0))
 		Audio.play_heavy_hit()
-		rig.shake(0.2)
-		stamina = minf(stamina + 15.0, max_stamina)
+		rig.shake(0.25)
+		stamina = minf(stamina + 20.0, max_stamina)
 		stamina_changed.emit(stamina, max_stamina)
 		_stagger_attacker(from_pos)
 		return 0.0
 	var cost := amount * BLOCK_STAMINA_MULT
 	FX.hit_stop(0.05)
 	FX.sparks(spark_pos, Vector3.UP, Color(1.0, 0.9, 0.6), 10)
+	FX.shockwave_ring(spark_pos, 1.6, Color(1.0, 0.85, 0.4, 0.6), 0.2)
 	Audio.play_hit()
 	rig.shake(0.15)
 	if stamina >= cost:

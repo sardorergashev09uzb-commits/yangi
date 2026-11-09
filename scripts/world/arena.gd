@@ -26,6 +26,10 @@ const BanditChiefScript = preload("res://scripts/enemies/bandit_chief.gd")
 const QuestJournalScript = preload("res://scripts/ui/quest_journal.gd")
 const LostSheepScript = preload("res://scripts/world/lost_sheep.gd")
 const AncientBalbalScript = preload("res://scripts/world/ancient_balbal.gd")
+const TerrainShader = preload("res://shaders/terrain_steppe.gdshader")
+const SteppeFoliageScript = preload("res://scripts/world/steppe_foliage.gd")
+const WaterStreamScript = preload("res://scripts/world/water_stream.gd")
+const MirageDesertScript = preload("res://scripts/world/mirage_desert.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -77,8 +81,17 @@ func _ready() -> void:
 	quest_journal.add_to_group("quest_journal")
 	add_child(quest_journal)
 
-	# Yagona yaxlit ulkan Boysun dashti zamini: Shimoldagi Zindon va Qal'agacha to'liq cho'zilgan
-	_box(Vector3(0, -1.0, -50), Vector3(500, 2.0, 500), Color(0.42, 0.45, 0.28))
+	# Yagona yaxlit ulkan Boysun dashti zamini: PBR relyingli shader bilan qoplangan
+	_build_procedural_terrain()
+
+	# Shamolda hilpiraydigan maysalar va dasht lolalari (MultiMesh Foliage)
+	add_child(SteppeFoliageScript.new())
+
+	# Boysun buloq daryosi va ko'prik
+	add_child(WaterStreamScript.new())
+
+	# Qoraqum Sarobi Sahrosi (Mirage Desert biome & Ancient Ruins)
+	add_child(MirageDesertScript.new())
 
 	# Mutlaq xavfsizlik to'shagi (Safety Net Floor) - xarita ostida hech narsa cheksizlikka qulab ketmasligi uchun
 	_box(Vector3(0, -2.5, -50), Vector3(600, 1.0, 600), Color(0.2, 0.2, 0.2))
@@ -549,6 +562,26 @@ func _pillar(pos: Vector3) -> void:
 	add_child(body)
 
 
+func _build_procedural_terrain() -> void:
+	var body := StaticBody3D.new()
+	body.position = Vector3(0, -1.0, -50)
+	var mesh_inst := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(500, 2.0, 500)
+	var mat := ShaderMaterial.new()
+	mat.shader = TerrainShader
+	mesh_inst.mesh = mesh
+	mesh_inst.material_override = mat
+
+	var col := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = mesh.size
+	col.shape = shape
+	body.add_child(mesh_inst)
+	body.add_child(col)
+	add_child(body)
+
+
 func _build_environment() -> void:
 	var sky_mat := ProceduralSkyMaterial.new()
 	sky_mat.sky_top_color = Color(0.2, 0.45, 0.75)
@@ -563,23 +596,39 @@ func _build_environment() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.75
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.tonemap_exposure = 1.05
+	env.ambient_light_energy = 0.8
+	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 1.08
+	env.tonemap_white = 1.0
 
-	# Realistik tuman (Volumetric-like atmosferik fog)
+	# Kinematik tuman va havodagi nur tolalari (God Rays)
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.82, 0.76, 0.68)
-	env.fog_density = 0.0025
-	env.fog_aerial_perspective = 0.5
+	env.fog_density = 0.002
+	env.fog_aerial_perspective = 0.55
 
-	# Zamonaviy post-processing: SSAO, Glow va rang jozibadorligi
+	env.volumetric_fog_enabled = true
+	env.volumetric_fog_density = 0.008
+	env.volumetric_fog_albedo = Color(0.86, 0.82, 0.74)
+	env.volumetric_fog_anisotropy = 0.35
+	env.volumetric_fog_length = 100.0
+
+	# Zamonaviy post-processing: SSAO, Glow va kinoradagi rang jozibasi
 	env.ssao_enabled = true
-	env.ssao_radius = 1.5
-	env.ssao_intensity = 2.0
+	env.ssao_radius = 1.6
+	env.ssao_intensity = 2.2
+	env.ssao_power = 1.5
+	env.ssao_detail = 0.5
+
 	env.glow_enabled = true
-	env.glow_intensity = 0.6
-	env.glow_bloom = 0.15
+	env.glow_normalized = true
+	env.glow_intensity = 0.75
+	env.glow_bloom = 0.18
+
+	env.adjustment_enabled = true
+	env.adjustment_brightness = 1.02
+	env.adjustment_contrast = 1.08
+	env.adjustment_saturation = 1.15
 
 	var we := WorldEnvironment.new()
 	we.environment = env
@@ -589,8 +638,10 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-50, -35, 0)
 	sun.light_color = Color(1.0, 0.94, 0.84)
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 140.0
+	sun.shadow_blur = 1.2
+	sun.directional_shadow_max_distance = 150.0
 	sun.directional_shadow_blend_splits = true
+	sun.light_volumetric_fog_energy = 1.6
 	add_child(sun)
 
 	# 12-bosqich: Dinamik Kun/Tun aylanishini boshlash

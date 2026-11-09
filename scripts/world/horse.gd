@@ -216,9 +216,17 @@ func _process_mounted(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0.0, 30.0 * delta)
 		velocity.z = move_toward(velocity.z, 0.0, 30.0 * delta)
 
-	# Sakrash
+	# Sakrash: Oddiy sakrash yoki Boychiborning Afsonaviy Pegas Sakrashi (Pegasus Leap)
 	if is_on_floor() and (Input.is_action_just_pressed("jump") or Input.is_action_just_pressed("dodge")):
-		velocity.y = jump_velocity
+		if galloping or (rider != null and rider.get("has_golden_horseshoes")):
+			velocity.y = 11.5
+			FX.impact_burst(global_position, Color(0.3, 0.8, 1.0), 20)
+			FX.shockwave_ring(global_position, 4.2, Color(0.3, 0.85, 1.0, 0.8), 0.4)
+			Audio.play_boss_slam()
+			if rider != null and "rig" in rider and rider.rig:
+				rider.rig.shake(0.3)
+		else:
+			velocity.y = jump_velocity
 		apply_floor_snap()
 
 	if not is_on_floor():

@@ -118,3 +118,71 @@ func dust(world_pos: Vector3, count := 8, p_scale := 1.0, color := Color(0.72, 0
 func impact_burst(world_pos: Vector3, color := Color(1.0, 0.35, 0.1), count := 14) -> void:
 	sparks(world_pos, Vector3.UP, color, count)
 	dust(world_pos, 6, 0.8, Color(0.4, 0.3, 0.25, 0.5))
+
+
+## Kengayuvchi shaffof to'lqin halqasi (Shockwave ring)
+func shockwave_ring(world_pos: Vector3, radius_max := 3.5, color := Color(1.0, 0.85, 0.4, 0.8), duration := 0.35) -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	var mesh_inst := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.85
+	torus.outer_radius = 1.0
+	torus.rings = 24
+	torus.ring_segments = 6
+	mesh_inst.mesh = torus
+
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = color
+	mesh_inst.material_override = mat
+
+	mesh_inst.global_position = world_pos + Vector3(0, 0.08, 0)
+	mesh_inst.scale = Vector3(0.2, 0.1, 0.2)
+	scene.add_child(mesh_inst)
+
+	var t := mesh_inst.create_tween()
+	t.tween_property(mesh_inst, "scale", Vector3(radius_max, 0.1, radius_max), duration).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(mat, "albedo_color:a", 0.0, duration).set_ease(Tween.EASE_IN)
+	t.tween_callback(mesh_inst.queue_free)
+
+
+## Qilich zarbasi nuri (Crescent slash arc)
+func slash_arc(world_pos: Vector3, facing_rot: Vector3, color := Color(0.8, 0.95, 1.0, 0.85), scale_size := 1.2) -> void:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+	var mesh_inst := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.7 * scale_size
+	torus.outer_radius = 1.15 * scale_size
+	torus.rings = 16
+	torus.ring_segments = 4
+	mesh_inst.mesh = torus
+
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_color = color
+	mesh_inst.material_override = mat
+
+	mesh_inst.global_position = world_pos
+	mesh_inst.rotation = facing_rot
+	mesh_inst.scale = Vector3(0.5, 0.5, 0.5)
+	scene.add_child(mesh_inst)
+
+	var t := mesh_inst.create_tween()
+	t.tween_property(mesh_inst, "scale", Vector3(scale_size, 0.1, scale_size * 1.3), 0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(mat, "albedo_color:a", 0.0, 0.14)
+	t.tween_callback(mesh_inst.queue_free)
+
+
+## Mukammal qaytarish effekti (Parry burst)
+func parry_burst(world_pos: Vector3) -> void:
+	sparks(world_pos, Vector3.UP, Color(0.4, 0.85, 1.0), 24)
+	sparks(world_pos, Vector3.UP, Color(1.0, 0.95, 0.7), 16)
+	shockwave_ring(world_pos, 2.8, Color(0.4, 0.9, 1.0, 0.9), 0.3)
+	camera_shake(0.25)
+

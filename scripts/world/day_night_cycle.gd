@@ -61,9 +61,13 @@ func _update_lighting(_delta: float) -> void:
 		sky_mat.sky_horizon_color = Color(0.9, 0.55, 0.3).lerp(Color(0.85, 0.75, 0.6), day_factor)
 		sky_mat.ground_horizon_color = sky_mat.sky_horizon_color
 
-		# Tuman
+		# Tuman va Volumetric Fog
 		env.fog_light_color = Color(0.85, 0.65, 0.45).lerp(Color(0.8, 0.76, 0.68), day_factor)
 		env.fog_density = lerpf(0.0035, 0.002, day_factor)
+		if env.volumetric_fog_enabled:
+			env.volumetric_fog_albedo = Color(0.9, 0.7, 0.5).lerp(Color(0.86, 0.82, 0.74), day_factor)
+			env.volumetric_fog_density = lerpf(0.012, 0.008, day_factor)
+			sun.light_volumetric_fog_energy = lerpf(0.8, 1.8, day_factor)
 	else:
 		# TUN (Oydin kecha)
 		var night_factor := clampf(-sun_height * 2.0, 0.0, 1.0)
@@ -77,6 +81,10 @@ func _update_lighting(_delta: float) -> void:
 		sky_mat.sky_horizon_color = Color(0.06, 0.08, 0.14)
 		sky_mat.ground_horizon_color = Color(0.04, 0.05, 0.08)
 
-		# Tungi tuman
+		# Tungi tuman va Volumetric Fog
 		env.fog_light_color = Color(0.08, 0.1, 0.16)
 		env.fog_density = 0.004
+		if env.volumetric_fog_enabled:
+			env.volumetric_fog_albedo = Color(0.06, 0.08, 0.14)
+			env.volumetric_fog_density = 0.012
+			sun.light_volumetric_fog_energy = 0.3
