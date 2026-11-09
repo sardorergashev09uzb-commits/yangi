@@ -23,6 +23,9 @@ const CraftingMenuScript = preload("res://scripts/ui/crafting_menu.gd")
 const ResourceNodeScript = preload("res://scripts/world/resource_node.gd")
 const CamelCaravanScript = preload("res://scripts/world/camel_caravan.gd")
 const BanditChiefScript = preload("res://scripts/enemies/bandit_chief.gd")
+const QuestJournalScript = preload("res://scripts/ui/quest_journal.gd")
+const LostSheepScript = preload("res://scripts/world/lost_sheep.gd")
+const AncientBalbalScript = preload("res://scripts/world/ancient_balbal.gd")
 
 var _boss: CharacterBody3D
 var _dungeon_gate: StaticBody3D
@@ -68,6 +71,11 @@ func _ready() -> void:
 	var craft_menu := CraftingMenuScript.new()
 	craft_menu.add_to_group("crafting_menu")
 	add_child(craft_menu)
+
+	# Doston va Vazifalar Jurnali [ J ]
+	var quest_journal := QuestJournalScript.new()
+	quest_journal.add_to_group("quest_journal")
+	add_child(quest_journal)
 
 	# Yagona yaxlit ulkan Boysun dashti zamini: Shimoldagi Zindon va Qal'agacha to'liq cho'zilgan
 	_box(Vector3(0, -1.0, -50), Vector3(500, 2.0, 500), Color(0.42, 0.45, 0.28))
@@ -132,6 +140,12 @@ func _ready() -> void:
 
 	# Sahro Qaroqchilari Istehkomi (Bandit Outpost)
 	_build_bandit_outpost()
+
+	# Qultoy Cho'ponning yo'qolgan podasi (3 ta adashgan qo'y)
+	_build_lost_flock()
+
+	# Qadimiy tosh Balballar (4 ta muqaddas obida)
+	_build_ancient_balbals()
 
 	# O'yinchi qayta tirilganda arenani tiklash ulanishi
 	_connect_player_respawn.call_deferred()
@@ -772,6 +786,39 @@ func _build_bandit_outpost() -> void:
 
 	# 6. O'g'irlangan Xazina Sandig'i
 	_spawn_chest("chest_bandit_outpost", Vector3(76.5, 0.0, 50.0), 85, -45.0)
+
+
+func _build_lost_flock() -> void:
+	_spawn_lost_sheep("sheep_1", Vector3(28.0, 0.0, -18.0))
+	_spawn_lost_sheep("sheep_2", Vector3(-28.0, 0.0, 32.0))
+	_spawn_lost_sheep("sheep_3", Vector3(48.0, 0.0, 14.0))
+
+
+func _spawn_lost_sheep(id: String, pos: Vector3) -> CharacterBody3D:
+	var sheep := LostSheepScript.new()
+	sheep.sheep_id = id
+	sheep.position = pos
+	sheep.rotation_degrees.y = randf_range(0, 360)
+	add_child(sheep)
+	return sheep
+
+
+func _build_ancient_balbals() -> void:
+	_spawn_ancient_balbal("balbal_north", "Shimoliy Balbal", Vector3(-25.0, 0.0, -75.0), 0.0)
+	_spawn_ancient_balbal("balbal_east", "Sharqiy Balbal", Vector3(82.0, 0.0, 15.0), -90.0)
+	_spawn_ancient_balbal("balbal_south", "Janubiy Balbal", Vector3(20.0, 0.0, 80.0), 180.0)
+	_spawn_ancient_balbal("balbal_west", "G'arbiy Balbal", Vector3(-65.0, 0.0, 20.0), 90.0)
+
+
+func _spawn_ancient_balbal(id: String, bname: String, pos: Vector3, rot_y: float) -> StaticBody3D:
+	var balbal := AncientBalbalScript.new()
+	balbal.balbal_id = id
+	balbal.balbal_name = bname
+	balbal.position = pos
+	balbal.rotation_degrees.y = rot_y
+	add_child(balbal)
+	return balbal
+
 
 
 

@@ -69,9 +69,17 @@ func _ready() -> void:
 	_craft_hint.add_theme_color_override("font_color", Color(0.7, 0.95, 0.75))
 	add_child(_craft_hint)
 
+	var _journal_hint := Label.new()
+	_journal_hint.name = "JournalHint"
+	_journal_hint.text = "[ J ] - Doston Jurnali"
+	_journal_hint.position = Vector2(220, 72)
+	_journal_hint.add_theme_font_size_override("font_size", 12)
+	_journal_hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	add_child(_journal_hint)
+
 	_skill_hint = Label.new()
 	_skill_hint.text = "★ [ TAB ] - Yangi ko'nikma!"
-	_skill_hint.position = Vector2(230, 72)
+	_skill_hint.position = Vector2(360, 72)
 	_skill_hint.add_theme_font_size_override("font_size", 12)
 	_skill_hint.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
 	_skill_hint.visible = false
@@ -102,9 +110,9 @@ func _ready() -> void:
 
 	var help := Label.new()
 	help.position = Vector2(30, 92)
-	help.text = "WASD - yurish | Sichqoncha - kamera | TAB - doston & ko'nikmalar | E - suhbatlashish | F - Boychibor | H - hushtak\n" \
-			+ "Ot ustida Shift - shiddatli galop (16 m/s) va toptash | Space - qochish | X - sakrash | Q - blok | C - Alp Gumburi (Super zarba) | F5/F9 - saqlash/yuklash | O'ng tugma - kamon\n" \
-			+ "Sharqda: O'tov, Qultoy Cho'pon va Dev | Shimolda: Surxayil Arenasi | T - qayta boshlash"
+	help.text = "WASD - yurish | Sichqoncha - kamera | J - doston jurnali | V - yasash | TAB - ko'nikmalar | E - suhbatlashish | F - Boychibor\n" \
+			+ "Ot ustida Shift - shiddatli galop (16 m/s) va toptash | Space - qochish | X - sakrash | Q - blok | C - Alp Gumburi | F5/F9 - saqlash/yuklash\n" \
+			+ "Sharqda: O'tov, Chorsu bozori, Qaroqchilar | Shimolda: Surxayil Arenasi & Zindon | T - qayta boshlash"
 	add_child(help)
 
 	_connect_player.call_deferred()
@@ -587,9 +595,9 @@ func _setup_quest_ui() -> void:
 
 	var rows := [
 		{"id": "qultoy", "title": "Qultoy Cho'pon sadosi", "hint": "O'tovda suhbatlashish [ E ]"},
-		{"id": "boychibor", "title": "Boychibor tulpori", "hint": "Otga minish va chopish [ F ]"},
-		{"id": "giant", "title": "Qoyali Dasht Devi", "hint": "Sharqdagi devni yengish"},
-		{"id": "boss", "title": "Surxayil Alp arenasi", "hint": "Shimoliy arenadagi botirni yengish"}
+		{"id": "boss", "title": "Surxayil Alp arenasi", "hint": "Shimoliy arenadagi botirni yengish"},
+		{"id": "karajon_oath", "title": "Karajon bilan qardoshlik", "hint": "Zindonda suhbatlashish [ E ]"},
+		{"id": "rescue_barchin", "title": "Barchinoyni ozod etish", "hint": "Barchinoyni qutqarish [ E ]"}
 	]
 
 	for r in rows:
@@ -624,6 +632,12 @@ func _setup_quest_ui() -> void:
 			"title": tlbl,
 			"hint": hlbl
 		}
+
+	var journal_sub := Label.new()
+	journal_sub.text = "📜 [ J ] - Barcha vazifalar jurnali"
+	journal_sub.add_theme_font_size_override("font_size", 11)
+	journal_sub.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
+	main_vbox.add_child(journal_sub)
 
 
 func _refresh_quest_tracker() -> void:

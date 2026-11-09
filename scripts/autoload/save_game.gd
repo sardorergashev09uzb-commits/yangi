@@ -55,6 +55,8 @@ func collect_state() -> Dictionary:
 		for id in qs.quests.keys():
 			done[id] = qs.quests[id].completed
 		data["quests"] = done
+		data["rescued_sheep"] = qs.rescued_sheep.duplicate()
+		data["communed_balbals"] = qs.communed_balbals.duplicate()
 	var player = get_tree().get_first_node_in_group("player")
 	if player:
 		var pos: Vector3 = player.global_position
@@ -141,6 +143,26 @@ func apply_state(data: Dictionary) -> void:
 			var c := bool(done.get(id, false))
 			qs.quests[id].completed = c
 			qs.quest_state_changed.emit(id, c)
+		if data.has("rescued_sheep"):
+			qs.rescued_sheep.clear()
+			for s_id in data["rescued_sheep"]:
+				qs.rescued_sheep.append(String(s_id))
+			for s in get_tree().get_nodes_in_group("lost_sheep"):
+				if qs.rescued_sheep.has(s.get("sheep_id")):
+					s.set("is_rescued", true)
+					if s.get("_prompt"):
+						s.get("_prompt").text = "🐑 Qutqarildi ✓"
+						s.get("_prompt").modulate = Color(0.35, 1.0, 0.45)
+		if data.has("communed_balbals"):
+			qs.communed_balbals.clear()
+			for b_id in data["communed_balbals"]:
+				qs.communed_balbals.append(String(b_id))
+			for b in get_tree().get_nodes_in_group("ancient_balbals"):
+				if qs.communed_balbals.has(b.get("balbal_id")):
+					b.set("is_communed", true)
+					if b.get("_prompt"):
+						b.get("_prompt").text = "🗿 %s ✓" % b.balbal_name
+						b.get("_prompt").modulate = Color(1.0, 0.85, 0.25)
 		_sync_world(qs)
 
 	if player and data.has("player"):
